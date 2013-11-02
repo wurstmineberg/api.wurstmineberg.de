@@ -6,6 +6,7 @@ A basic bottle app skeleton
 SERVERLOCATION="/opt/wurstmineberg/server/wurstmineberg"
 
 DOCUMENTATION_INTRO="""
+<h1>Wurstmineberg API</h1>
 Welcome to the Wurstmineberg API. Feel free to play around!<br>
 <br>
 Currently available API endpoints:
@@ -23,9 +24,12 @@ def show_index():
     '''
     The documentation page
     '''
-    documentation = DOCUMENTATION_INTRO
+    documentation = '<p>' + DOCUMENTATION_INTRO + '</p>'
+    documentation += '<table id="api-endpoints"><tbody>\n'
+    documentation += '<tr><th style="text-align: left">Endpoint</th><th style="text-align: left">Description</th>\n'
     for route in app.routes:
-        documentation += "<br>* " + route.rule + ": " + str(route.callback.__doc__)
+        documentation += "\n<tr><td>" + route.rule + "</td><td>" + str(route.callback.__doc__) + '</td></tr>'
+    documentation += '</tbody></table>'
     return documentation
 
 def nbt_to_dict(nbtfile):
