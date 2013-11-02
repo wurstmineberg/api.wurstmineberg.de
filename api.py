@@ -181,6 +181,21 @@ def api_playerstats_by_id(identifier):
         abort(404, "Identifier not found")
     return data
 
+@app.route('/server/playernames.json')
+def api_playernames():
+    '''
+    Returns all player names it can find
+    '''
+    alldata = api_playerstats()
+    data = []
+    directory = os.path.join(SERVERLOCATION, 'players')
+    for root,dirs,files in os.walk(directory):
+        for file in files:
+            if file.endswith(".dat"):
+                name = os.path.splitext(file)[0]
+                data.append(name)
+    return json.dumps(data)
+
 class StripPathMiddleware(object):
     '''
     Get that slash out of the request
