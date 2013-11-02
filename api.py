@@ -11,15 +11,15 @@ Welcome to the Wurstmineberg API. Feel free to play around!<br>
 Currently available API endpoints:
 """
 
-import bottle
+from bottle import *
 from nbt import *
 
-app = application = bottle.Bottle()
+app = application = Bottle()
 
 @app.route('/')
 def show_index():
     '''
-    The front "index" page
+    The documentation page
     '''
     documentation = DOCUMENTATION_INTRO
     for route in app.routes:
@@ -65,6 +65,13 @@ def api_player_data(player_name):
 
     return nbt_to_dict(nbtfile)
 
+@app.route('/player/:player_name/stats.json')
+def api_stats(player_name):
+    '''
+    Returns the stats JSON file from the server
+    '''
+    return static_file('/stats/' + player_name + '.json', SERVERLOCATION)
+
 @app.route('/server/scoreboard.json')
 def api_scoreboard():
     '''
@@ -78,7 +85,7 @@ def api_level():
     '''
     Returns the level.dat encoded as JSON
     '''
-    nbtfile = nbt.NBTFile(SERVERLOCATION +"/level.dat")
+    nbtfile = nbt.NBTFile(SERVERLOCATION + "/level.dat")
     return nbt_to_dict(nbtfile)
 
 class StripPathMiddleware(object):
@@ -92,7 +99,7 @@ class StripPathMiddleware(object):
         return self.a(e, h)
 
 if __name__ == '__main__':
-    bottle.run(app=StripPathMiddleware(app),
+    run(app=StripPathMiddleware(app),
         server='python_server',
         host='0.0.0.0',
         port=8080)
