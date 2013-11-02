@@ -11,6 +11,8 @@ Welcome to the Wurstmineberg API. Feel free to play around!<br>
 Currently available API endpoints:
 """
 
+import os
+import json
 from bottle import *
 from nbt import *
 
@@ -87,6 +89,97 @@ def api_level():
     '''
     nbtfile = nbt.NBTFile(SERVERLOCATION + "/level.dat")
     return nbt_to_dict(nbtfile)
+
+@app.route('/server/playerstats.json')
+def api_playerstats():
+    '''
+    Returns all player stats in one file. This file can be potentially big. Please use one of the other APIs if possible.
+    '''
+    data = {}
+    directory = os.path.join(SERVERLOCATION, 'stats')
+    for root,dirs,files in os.walk(directory):
+        for file in files:
+            if file.endswith(".json"):
+                with open(os.path.join(directory, file), 'r') as playerfile:
+                    name = os.path.splitext(file)[0]
+                    data[name] = json.loads(playerfile.read())
+    return data
+
+@app.route('/server/playerstats/general.json')
+def api_playerstats_general():
+    '''
+    Returns all general stats in one file
+    '''
+    alldata = api_playerstats()
+    data = {}
+    nonGeneralActions = ['useItem', 'craftItem', 'breakItem', 'mineBlock']
+
+    for player in alldata:
+        playerdata = alldata[player]
+        playerdict = {}
+        for statstr in playerdata:
+            value = playerdata[statstr]
+            stat = statstr.split('.')
+            if stat[0] == 'stat' and stat[1] not in nonGeneralActions:
+                    playerdict[statstr] = value
+        data[player] = playerdict
+    return data
+
+@app.route('/server/playerstats/item.json')
+def api_playerstats_items():
+    '''
+    Returns all item and block stats in one file
+    '''
+    alldata = api_playerstats()
+    data = {}
+    itemActions = ['useItem', 'craftItem', 'breakItem', 'mineBlock']
+
+    for player in alldata:
+        playerdata = alldata[player]
+        playerdict = {}
+        for statstr in playerdata:
+            value = playerdata[statstr]
+            stat = statstr.split('.')
+            if stat[0] == 'stat' and stat[1] in itemActions:
+                playerdict[statstr] = value
+        data[player] = playerdict
+    return data                                                                                                                                      
+
+@app.route('/server/playerstats/achievement.json')
+def api_playerstats_achievements():
+    '''
+    Returns all achievement stats in one file
+    '''
+    alldata = api_playerstats()
+    data = {}
+
+    for player in alldata:
+        playerdata = alldata[player]
+        playerdict = {}
+        for statstr in playerdata:
+            value = playerdata[statstr]
+            stat = statstr.split('.')
+            if stat[0] == 'achievement':
+                playerdict[statstr] = value
+        data[player] = playerdict
+    return data
+
+@app.route('/server/playerstats/by-id/:identifier')
+def api_playerstats_by_id(identifier):
+    '''
+    Returns the stat item :identifier from all player stats
+    '''
+    alldata = api_playerstats()
+
+    data = {}
+    for player in alldata:
+        playerdata = alldata[player]
+        playerdict = {}
+        if identifier in playerdata:
+            data[player] = playerdata[identifier]
+    if len(data) == 0:
+        abort(404, "Identifier not found")
+    return data
 
 class StripPathMiddleware(object):
     '''
