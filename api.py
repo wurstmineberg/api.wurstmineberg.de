@@ -71,6 +71,31 @@ def api_player_data(player_name):
 
     return nbt_to_dict(nbtfile)
 
+@app.route('/server/playerdata.json')
+def api_player_data_all():
+    '''
+    Returns all the player data encoded as JSON
+    '''
+    nbtdicts = {}
+    for user in playernames():
+        nbtdata = api_player_data(user)
+        nbtdicts[user] = nbtdata
+    return nbtdicts
+
+@app.route('/server/playerdata/by-id/:identifier')
+def api_player_data_by_id(identifier):
+    '''
+    Returns all the player data with the specified ID
+    '''
+    all_data = api_player_data_all()
+    data = {}
+    for player in all_data:
+        playerdata = all_data[player]
+        for name in playerdata:
+            if name == identifier:
+                data[player] = playerdata[name]
+    return data
+
 @app.route('/player/:player_name/stats.json')
 def api_stats(player_name):
     '''
@@ -185,8 +210,7 @@ def api_playerstats_by_id(identifier):
         abort(404, "Identifier not found")
     return data
 
-@app.route('/server/playernames.json')
-def api_playernames():
+def playernames():
     '''
     Returns all player names it can find
     '''
@@ -198,7 +222,14 @@ def api_playernames():
             if file.endswith(".dat"):
                 name = os.path.splitext(file)[0]
                 data.append(name)
-    return json.dumps(data)
+    return data
+
+@app.route('/server/playernames.json')
+def api_playernames():
+    '''
+    Returns all player names it can find
+    '''
+    return json.dumps(playernames)
 
 class StripPathMiddleware(object):
     '''
