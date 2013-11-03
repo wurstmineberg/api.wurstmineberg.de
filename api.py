@@ -229,7 +229,7 @@ def api_playernames():
     '''
     Returns all player names it can find
     '''
-    return json.dumps(playernames)
+    return json.dumps(playernames())
 
 class StripPathMiddleware(object):
     '''
