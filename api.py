@@ -141,7 +141,7 @@ def api_playerstats_general():
     '''
     alldata = api_playerstats()
     data = {}
-    nonGeneralActions = ['useItem', 'craftItem', 'breakItem', 'mineBlock']
+    nonGeneralActions = ['useItem', 'craftItem', 'breakItem', 'mineBlock', 'killEntity', 'entityKilledBy']
 
     for player in alldata:
         playerdata = alldata[player]
