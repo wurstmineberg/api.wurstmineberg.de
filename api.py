@@ -1,11 +1,11 @@
 #!/usr/bin/python
 '''
-A basic bottle app skeleton
+Wurstmineberg API server
 '''
 
-SERVERLOCATION="/opt/wurstmineberg/server/wurstmineberg"
+SERVERLOCATION = "/opt/wurstmineberg/server/wurstmineberg"
 
-DOCUMENTATION_INTRO="""
+DOCUMENTATION_INTRO = """
 <h1>Wurstmineberg API</h1>
 Welcome to the Wurstmineberg API. Feel free to play around!<br>
 <br>
@@ -19,6 +19,7 @@ from nbt import *
 
 app = application = Bottle()
 
+
 @app.route('/')
 def show_index():
     '''
@@ -28,9 +29,11 @@ def show_index():
     documentation += '<table id="api-endpoints"><tbody>\n'
     documentation += '<tr><th style="text-align: left">Endpoint</th><th style="text-align: left">Description</th>\n'
     for route in app.routes:
-        documentation += "\n<tr><td>" + route.rule + "</td><td>" + str(route.callback.__doc__) + '</td></tr>'
+        documentation += "\n<tr><td>" + route.rule + \
+            "</td><td>" + str(route.callback.__doc__) + '</td></tr>'
     documentation += '</tbody></table>'
     return documentation
+
 
 def nbt_to_dict(nbtfile):
     dict = {}
@@ -62,7 +65,8 @@ def nbt_to_dict(nbtfile):
     else:
         return dict
 
-@app.route('/player/:player_name/playerdata.json')
+
+@app.route('/player/:player_minecraft_name/playerdata.json')
 def api_player_data(player_name):
     '''
     Returns the player data encoded as JSON
@@ -70,6 +74,28 @@ def api_player_data(player_name):
     nbtfile = nbt.NBTFile(SERVERLOCATION + "/players/" + player_name + ".dat")
 
     return nbt_to_dict(nbtfile)
+
+
+@app.route('/player/:player_minecraft_name/stats.json')
+def api_stats(player_name):
+    '''
+    Returns the stats JSON file from the server
+    '''
+    return static_file('/stats/' + player_name + '.json', SERVERLOCATION)
+
+
+@app.route('/player/:player_id/info.json')
+def api_player_info(player_name):
+    '''
+    Returns the section of people.json that corresponds to the player
+    '''
+    people_json_filename = '/opt/wurstmineberg/config/people.json'
+    person_data = None
+    with open(people_json_filename) as people_json:
+        data = json.load(people_json)
+        person_data = filter(lambda a: player_name == a['id'], data)[0]
+    return person_data
+
 
 @app.route('/server/playerdata.json')
 def api_player_data_all():
@@ -81,6 +107,7 @@ def api_player_data_all():
         nbtdata = api_player_data(user)
         nbtdicts[user] = nbtdata
     return nbtdicts
+
 
 @app.route('/server/playerdata/by-id/:identifier')
 def api_player_data_by_id(identifier):
@@ -96,12 +123,6 @@ def api_player_data_by_id(identifier):
                 data[player] = playerdata[name]
     return data
 
-@app.route('/player/:player_name/stats.json')
-def api_stats(player_name):
-    '''
-    Returns the stats JSON file from the server
-    '''
-    return static_file('/stats/' + player_name + '.json', SERVERLOCATION)
 
 @app.route('/server/scoreboard.json')
 def api_scoreboard():
@@ -111,6 +132,7 @@ def api_scoreboard():
     nbtfile = nbt.NBTFile(SERVERLOCATION + "/data/scoreboard.dat")
     return nbt_to_dict(nbtfile)
 
+
 @app.route('/server/level.json')
 def api_level():
     '''
@@ -119,6 +141,7 @@ def api_level():
     nbtfile = nbt.NBTFile(SERVERLOCATION + "/level.dat")
     return nbt_to_dict(nbtfile)
 
+
 @app.route('/server/playerstats.json')
 def api_playerstats():
     '''
@@ -126,13 +149,14 @@ def api_playerstats():
     '''
     data = {}
     directory = os.path.join(SERVERLOCATION, 'stats')
-    for root,dirs,files in os.walk(directory):
+    for root, dirs, files in os.walk(directory):
         for file in files:
             if file.endswith(".json"):
                 with open(os.path.join(directory, file), 'r') as playerfile:
                     name = os.path.splitext(file)[0]
                     data[name] = json.loads(playerfile.read())
     return data
+
 
 @app.route('/server/playerstats/general.json')
 def api_playerstats_general():
@@ -141,7 +165,8 @@ def api_playerstats_general():
     '''
     alldata = api_playerstats()
     data = {}
-    nonGeneralActions = ['useItem', 'craftItem', 'breakItem', 'mineBlock', 'killEntity', 'entityKilledBy']
+    nonGeneralActions = [
+        'useItem', 'craftItem', 'breakItem', 'mineBlock', 'killEntity', 'entityKilledBy']
 
     for player in alldata:
         playerdata = alldata[player]
@@ -150,9 +175,10 @@ def api_playerstats_general():
             value = playerdata[statstr]
             stat = statstr.split('.')
             if stat[0] == 'stat' and stat[1] not in nonGeneralActions:
-                    playerdict[statstr] = value
+                playerdict[statstr] = value
         data[player] = playerdict
     return data
+
 
 @app.route('/server/playerstats/item.json')
 def api_playerstats_items():
@@ -172,7 +198,8 @@ def api_playerstats_items():
             if stat[0] == 'stat' and stat[1] in itemActions:
                 playerdict[statstr] = value
         data[player] = playerdict
-    return data                                                                                                                                      
+    return data
+
 
 @app.route('/server/playerstats/achievement.json')
 def api_playerstats_achievements():
@@ -193,6 +220,7 @@ def api_playerstats_achievements():
         data[player] = playerdict
     return data
 
+
 @app.route('/server/playerstats/by-id/:identifier')
 def api_playerstats_by_id(identifier):
     '''
@@ -210,6 +238,7 @@ def api_playerstats_by_id(identifier):
         abort(404, "Identifier not found")
     return data
 
+
 def playernames():
     '''
     Returns all player names it can find
@@ -217,12 +246,13 @@ def playernames():
     alldata = api_playerstats()
     data = []
     directory = os.path.join(SERVERLOCATION, 'players')
-    for root,dirs,files in os.walk(directory):
+    for root, dirs, files in os.walk(directory):
         for file in files:
             if file.endswith(".dat"):
                 name = os.path.splitext(file)[0]
                 data.append(name)
     return data
+
 
 @app.route('/server/playernames.json')
 def api_playernames():
@@ -231,12 +261,16 @@ def api_playernames():
     '''
     return json.dumps(playernames())
 
+
 class StripPathMiddleware(object):
+
     '''
     Get that slash out of the request
     '''
+
     def __init__(self, a):
         self.a = a
+
     def __call__(self, e, h):
         e['PATH_INFO'] = e['PATH_INFO'].rstrip('/')
         return self.a(e, h)
@@ -246,4 +280,3 @@ if __name__ == '__main__':
         server='python_server',
         host='0.0.0.0',
         port=8080)
-
