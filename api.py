@@ -4,6 +4,7 @@ Wurstmineberg API server
 '''
 
 SERVERLOCATION = "/opt/wurstmineberg/server/wurstmineberg"
+PEOPLE_JSON_FILENAME = "/opt/wurstmineberg/config/people.json"
 
 DOCUMENTATION_INTRO = """
 <h1>Wurstmineberg API</h1>
@@ -67,33 +68,33 @@ def nbt_to_dict(nbtfile):
 
 
 @app.route('/player/:player_minecraft_name/playerdata.json')
-def api_player_data(player_name):
+def api_player_data(player_minecraft_name):
     '''
     Returns the player data encoded as JSON
     '''
-    nbtfile = nbt.NBTFile(SERVERLOCATION + "/players/" + player_name + ".dat")
+    nbtfile = nbt.NBTFile(
+        SERVERLOCATION + "/players/" + player_minecraft_name + ".dat")
 
     return nbt_to_dict(nbtfile)
 
 
 @app.route('/player/:player_minecraft_name/stats.json')
-def api_stats(player_name):
+def api_stats(player_minecraft_name):
     '''
     Returns the stats JSON file from the server
     '''
-    return static_file('/stats/' + player_name + '.json', SERVERLOCATION)
+    return static_file('/stats/' + player_minecraft_name + '.json', SERVERLOCATION)
 
 
 @app.route('/player/:player_id/info.json')
-def api_player_info(player_name):
+def api_player_info(player_id):
     '''
     Returns the section of people.json that corresponds to the player
     '''
-    people_json_filename = '/opt/wurstmineberg/config/people.json'
     person_data = None
-    with open(people_json_filename) as people_json:
+    with open(PEOPLE_JSON_FILENAME) as people_json:
         data = json.load(people_json)
-        person_data = filter(lambda a: player_name == a['id'], data)[0]
+        person_data = filter(lambda a: player_id == a['id'], data)[0]
     return person_data
 
 
