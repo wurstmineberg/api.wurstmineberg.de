@@ -17,6 +17,7 @@ import os
 import json
 from bottle import *
 from nbt import *
+import time
 
 app = application = Bottle()
 
@@ -35,6 +36,14 @@ def show_index():
     documentation += '</tbody></table>'
     return documentation
 
+
+def nbtfile_to_dict(filename):
+    nbtfile = nbt.NBTFile(filename)
+    nbtdict = nbt_to_dict(nbtfile)
+    if isinstance(nbtdict, dict):
+        nbtdict["api-time-last-modified"] = os.path.getmtime(filename)
+        nbtdict["api-time-result-fetched"] = time.time()
+    return nbtdict
 
 def nbt_to_dict(nbtfile):
     dict = {}
@@ -57,14 +66,13 @@ def nbt_to_dict(nbtfile):
                 dict[tag.name] = tag.value
                 is_dict = True
 
-    if is_dict and is_collection:
+    if is_collection and is_dict:
         dict["collection"] = collection
-        return dict
 
-    if is_collection:
-        return collection
-    else:
+    if is_dict:
         return dict
+    else:
+        return collection
 
 
 @app.route('/player/:player_minecraft_name/playerdata.json')
@@ -72,10 +80,9 @@ def api_player_data(player_minecraft_name):
     '''
     Returns the player data encoded as JSON
     '''
-    nbtfile = nbt.NBTFile(
-        SERVERLOCATION + "/players/" + player_minecraft_name + ".dat")
+    nbtfile = SERVERLOCATION + "/players/" + player_minecraft_name + ".dat"
 
-    return nbt_to_dict(nbtfile)
+    return nbtfile_to_dict(nbtfile)
 
 
 @app.route('/player/:player_minecraft_name/stats.json')
@@ -130,8 +137,8 @@ def api_scoreboard():
     '''
     Returns the scoreboard data encoded as JSON
     '''
-    nbtfile = nbt.NBTFile(SERVERLOCATION + "/data/scoreboard.dat")
-    return nbt_to_dict(nbtfile)
+    nbtfile = SERVERLOCATION + "/data/scoreboard.dat"
+    return nbtfile_to_dict(nbtfile)
 
 
 @app.route('/server/level.json')
@@ -139,8 +146,8 @@ def api_level():
     '''
     Returns the level.dat encoded as JSON
     '''
-    nbtfile = nbt.NBTFile(SERVERLOCATION + "/level.dat")
-    return nbt_to_dict(nbtfile)
+    nbtfile = SERVERLOCATION + "/level.dat"
+    return nbtfile_to_dict(nbtfile)
 
 
 @app.route('/server/playerstats.json')
