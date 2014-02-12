@@ -14,7 +14,7 @@ Welcome to the Wurstmineberg API. Feel free to play around!<br>
 Currently available API endpoints:
 """
 
-__version__ = '1.0.0'
+__version__ = '1.1.0'
 
 import json
 import os
@@ -312,7 +312,7 @@ def api_item_by_damage(item_id, item_damage):
         else:
             abort(404, 'No item with id ' + str(item_id))
     else:
-        for item in all_items:
+        for _, item in all_items.items():
             if 'id' in item and item['id'] == item_id:
                 ret = item
                 break
