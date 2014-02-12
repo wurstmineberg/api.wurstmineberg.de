@@ -287,7 +287,7 @@ def api_all_items():
 @app.route('/minecraft/items/by-id/:item_id')
 def api_item_by_id(item_id):
     '''
-    Returns the item info for an item with the given numeric or text ID and the default damage value.
+    Returns the item info for an item with the given numeric or text ID and the default damage value. Note that text IDs may be ambiguous and will return an arbitrary matching item.
     '''
     return api_item_by_damage(item_id, None)
 
@@ -295,7 +295,7 @@ def api_item_by_id(item_id):
 @app.route('/minecraft/items/by-damage/:item_id/:item_damage')
 def api_item_by_damage(item_id, item_damage):
     '''
-    Returns the item info for an item with the given numeric or text ID and numeric damage value.
+    Returns the item info for an item with the given numeric or text ID and numeric damage value. Note that text IDs may be ambiguous and will return an arbitrary matching item.
     '''
     all_items = api_all_items()
     try:
@@ -315,6 +315,7 @@ def api_item_by_damage(item_id, item_damage):
         for item in all_items:
             if 'id' in item and item['id'] == item_id:
                 ret = item
+                break
         else:
             abort(404, 'No item with id ' + item_id)
     if 'damageValues' in ret:
