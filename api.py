@@ -5,6 +5,7 @@ Wurstmineberg API server
 
 SERVERLOCATION = "/opt/wurstmineberg/server/wurstmineberg"
 PEOPLE_JSON_FILENAME = "/opt/wurstmineberg/config/people.json"
+WEB_ASSETS = "/opt/hub/wurstmineberg/wurstmineberg-web/static/json"
 
 DOCUMENTATION_INTRO = """
 <h1>Wurstmineberg API</h1>
@@ -13,11 +14,15 @@ Welcome to the Wurstmineberg API. Feel free to play around!<br>
 Currently available API endpoints:
 """
 
-import os
+__version__ = '1.0.0'
+
 import json
+import os
+import re
+import time
+
 from bottle import *
 from nbt import *
-import time
 
 app = application = Bottle()
 
@@ -268,6 +273,55 @@ def api_playernames():
     Returns all player names it can find
     '''
     return json.dumps(playernames())
+
+
+@app.route('/minecraft/items/all.json')
+def api_all_items():
+    '''
+    Returns the item info JSON file, see https://github.com/wurstmineberg/wurstmineberg-web/blob/master/static/json/items.json.description.txt for documentation
+    '''
+    with open(os.path.join(WEB_ASSETS, 'items.json')) as items_file:
+        return json.load(items_file)
+
+
+@app.route('/minecraft/items/by-id/:item_id')
+def api_item_by_id(item_id):
+    '''
+    Returns the item info for an item with the given numeric or text ID and the default damage value.
+    '''
+    return api_item_by_damage(item_id, None)
+
+
+@app.route('/minecraft/items/by-damage/:item_id/:item_damage')
+def api_item_by_damage(item_id, item_damage):
+    '''
+    Returns the item info for an item with the given numeric or text ID and numeric damage value.
+    '''
+    all_items = api_all_items()
+    try:
+        item_id = int(item_id)
+        id_is_numeric = True
+    except ValueError:
+        id_is_numeric = False
+        item_id = re.sub('\\.', ':', str(item_id))
+        if ':' not in item_id:
+            item_id = 'minecraft:' + item_id
+    if id_is_numeric:
+        if str(item_id) in all_items:
+            ret = all_items[str(item_id)]
+        else:
+            abort(404, 'No item with id ' + str(item_id))
+    else:
+        for item in all_items:
+            if 'id' in item and item['id'] == item_id:
+                ret = item
+        else:
+            abort(404, 'No item with id ' + item_id)
+    if 'damageValues' in ret:
+        if str(item_damage) in ret['damageValues']:
+            ret.update(ret['damageValues'][str(item_damage)])
+        del ret['damageValues']
+    return ret
 
 
 class StripPathMiddleware(object):
