@@ -15,7 +15,7 @@ Welcome to the Wurstmineberg API. Feel free to play around!<br>
 Currently available API endpoints:
 """
 
-__version__ = '1.2.0'
+__version__ = '1.2.1'
 
 import json
 import os
@@ -331,7 +331,7 @@ def api_death_games_log():
     '''
     Returns the Death Games log, listing attempts in chronological order. See http://wiki.wurstmineberg.de/Death_Games for more info.
     '''
-    with open(os.path.join(LOGS, 'deathgames.json') as death_games_logfile:
+    with open(os.path.join(LOGS, 'deathgames.json')) as death_games_logfile:
         return json.load(death_games_logfile)
 
 
