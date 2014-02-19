@@ -3,9 +3,10 @@
 Wurstmineberg API server
 '''
 
-SERVERLOCATION = "/opt/wurstmineberg/server/wurstmineberg"
-PEOPLE_JSON_FILENAME = "/opt/wurstmineberg/config/people.json"
-WEB_ASSETS = "/opt/hub/wurstmineberg/wurstmineberg-web/static/json"
+LOGS = '/opt/wurstmineberg/log'
+PEOPLE_JSON_FILENAME = '/opt/wurstmineberg/config/people.json'
+SERVERLOCATION = '/opt/wurstmineberg/server/wurstmineberg'
+WEB_ASSETS = '/opt/hub/wurstmineberg/wurstmineberg-web/static/json'
 
 DOCUMENTATION_INTRO = """
 <h1>Wurstmineberg API</h1>
@@ -14,7 +15,7 @@ Welcome to the Wurstmineberg API. Feel free to play around!<br>
 Currently available API endpoints:
 """
 
-__version__ = '1.1.0'
+__version__ = '1.2.0'
 
 import json
 import os
@@ -323,6 +324,15 @@ def api_item_by_damage(item_id, item_damage):
             ret.update(ret['damageValues'][str(item_damage)])
         del ret['damageValues']
     return ret
+
+
+@app.route('/deathgames/log.json')
+def api_death_games_log():
+    '''
+    Returns the Death Games log, listing attempts in chronological order. See http://wiki.wurstmineberg.de/Death_Games for more info.
+    '''
+    with open(os.path.join(LOGS, 'deathgames.json') as death_games_logfile:
+        return json.load(death_games_logfile)
 
 
 class StripPathMiddleware(object):
