@@ -15,7 +15,7 @@ Welcome to the Wurstmineberg API. Feel free to play around!<br>
 Currently available API endpoints:
 """
 
-__version__ = '1.2.1'
+__version__ = '1.2.2'
 
 import json
 import os
@@ -107,6 +107,8 @@ def api_player_info(player_id):
     person_data = None
     with open(PEOPLE_JSON_FILENAME) as people_json:
         data = json.load(people_json)
+        if isinstance(data, dict):
+            data = data['people']
         person_data = filter(lambda a: player_id == a['id'], data)[0]
     return person_data
 
