@@ -217,6 +217,27 @@ def api_playerstats_items():
     return data
 
 
+@app.route('/server/playerstats/entitiy.json')
+def api_playerstats_entities():
+    '''
+    Returns all entity stats in one file
+    '''
+    alldata = api_playerstats()
+    data = {}
+    entityActions = ['killEntity', 'entityKilledBy']
+
+    for player in alldata:
+        playerdata = alldata[player]
+        playerdict = {}
+        for statstr in playerdata:
+            value = playerdata[statstr]
+            stat = statstr.split('.')
+            if stat[0] == 'stat' and stat[1] in entityActions:
+                playerdict[statstr] = value
+        data[player] = playerdict
+    return data
+
+
 @app.route('/server/playerstats/achievement.json')
 def api_playerstats_achievements():
     '''
