@@ -15,7 +15,7 @@ Welcome to the Wurstmineberg API. Feel free to play around!<br>
 Currently available API endpoints:
 """
 
-__version__ = '1.2.3'
+__version__ = '1.3.0'
 
 import json
 import os
@@ -217,7 +217,7 @@ def api_playerstats_items():
     return data
 
 
-@app.route('/server/playerstats/entitiy.json')
+@app.route('/server/playerstats/entity.json')
 def api_playerstats_entities():
     '''
     Returns all entity stats in one file
