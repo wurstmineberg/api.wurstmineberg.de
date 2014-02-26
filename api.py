@@ -15,7 +15,7 @@ Welcome to the Wurstmineberg API. Feel free to play around!<br>
 Currently available API endpoints:
 """
 
-__version__ = '1.2.2'
+__version__ = '1.2.3'
 
 import json
 import os
