@@ -15,7 +15,7 @@ Welcome to the Wurstmineberg API. Feel free to play around!<br>
 Currently available API endpoints:
 """
 
-__version__ = '1.3.0'
+__version__ = '1.4.0'
 
 import json
 import os
@@ -274,6 +274,16 @@ def api_playerstats_by_id(identifier):
     if len(data) == 0:
         abort(404, "Identifier not found")
     return data
+
+
+@app.route('/server/maps/by-id/:identifier')
+def api_map_by_id(identifier):
+    '''
+    Returns info about the map item with damage value :identifier, see http://minecraft.gamepedia.com/Map_Item_Format for documentation
+    '''
+    nbt_file = os.path.join(SERVERLOCATION, 'data', 'map_' + str(identifier) + '.dat')
+    
+    return nbtfile_to_dict(nbt_file)
 
 
 def playernames():
