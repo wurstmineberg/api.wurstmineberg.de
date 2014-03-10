@@ -3,7 +3,7 @@
 Wurstmineberg API server
 '''
 
-__version__ = '1.5.2'
+__version__ = '1.5.3'
 
 import json
 import os
@@ -117,7 +117,7 @@ def api_player_info(player_id):
         data = json.load(people_json)
         if isinstance(data, dict):
             data = data['people']
-        person_data = filter(lambda a: player_id == a['id'], data)[0]
+        person_data = list(filter(lambda a: player_id == a['id'], data))[0]
     return person_data
 
 
