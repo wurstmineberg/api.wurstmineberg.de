@@ -3,7 +3,7 @@
 Wurstmineberg API server
 '''
 
-__version__ = '1.5.0'
+__version__ = '1.5.1'
 
 import json
 import os
@@ -172,7 +172,7 @@ def api_whitelist():
     For UUID-based Minecraft servers (1.7.6 and later), returns the whitelist. For older servers, the behavior is undefined.
     '''
     with open(os.path.join(SERVER_DIR, 'whitelist.json')) as whitelist:
-        return json.load(whitelist)
+        return whitelist.read()
 
 
 @app.route('/server/playerstats.json')
