@@ -3,7 +3,7 @@
 Wurstmineberg API server
 '''
 
-__version__ = '1.5.5'
+__version__ = '1.5.6'
 
 import json
 import os
@@ -320,7 +320,10 @@ def playernames():
     Returns all player names it can find
     '''
     alldata = api_playerstats()
-    data = []
+    try:
+        data = [entry['name'] for entry in json.loads(api_whitelist())]
+    except:
+        data = []
     directory = os.path.join(WORLD_DIR, 'players')
     for root, dirs, files in os.walk(directory):
         for file in files:
