@@ -3,7 +3,7 @@
 Wurstmineberg API server
 '''
 
-__version__ = '1.5.4'
+__version__ = '1.5.5'
 
 import json
 import os
@@ -103,9 +103,20 @@ def api_player_data(player_minecraft_name):
 @app.route('/player/:player_minecraft_name/stats.json')
 def api_stats(player_minecraft_name):
     '''
-    Returns the stats JSON file from the server
+    Returns the stats JSON file from the server, also accepts the player id instead of the Minecraft name
     '''
-    return static_file('/stats/' + player_minecraft_name + '.json', WORLD_DIR)
+    stats_file = os.path.join(WORLD_DIR, 'stats', player_minecraft_name + '.json')
+    if not os.path.exists(stats_file):
+        for whitelist_entry in json.loads(api_whitelist()):
+            if whitelist_entry['name'] == player_minecraft_name:
+                uuid = whitelist_entry['uuid']
+                break
+        else:
+            uuid = api_player_info(player_minecraft_name)['minecraftUUID']
+        uuid = uuid[:8] + '-' + uuid[8:12] + '-' + uuid[12:16] + '-' + uuid[16:20] + '-' + uuid[20:]
+        stats_file = os.path.join(WORLD_DIR, 'stats', uuid + '.json')
+    with open(stats_file) as stats:
+        return json.load(stats)
 
 
 @app.route('/player/:player_id/info.json')
