@@ -3,7 +3,7 @@
 Wurstmineberg API server
 '''
 
-__version__ = '1.5.1'
+__version__ = '1.5.2'
 
 import json
 import os
@@ -89,7 +89,7 @@ def api_player_data(player_minecraft_name):
     '''
     nbtfile = os.path.join(WORLD_DIR, 'players', player_minecraft_name + '.dat')
     if not os.path.exists(nbtfile):
-        for whitelist_entry in api_whitelist():
+        for whitelist_entry in json.loads(api_whitelist()):
             if whitelist_entry['name'] == player_minecraft_name:
                 uuid = whitelist_entry['uuid']
         else:
