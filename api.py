@@ -3,7 +3,7 @@
 Wurstmineberg API server
 '''
 
-__version__ = '1.5.3'
+__version__ = '1.5.4'
 
 import json
 import os
@@ -92,6 +92,7 @@ def api_player_data(player_minecraft_name):
         for whitelist_entry in json.loads(api_whitelist()):
             if whitelist_entry['name'] == player_minecraft_name:
                 uuid = whitelist_entry['uuid']
+                break
         else:
             uuid = api_player_info(player_minecraft_name)['minecraftUUID']
         uuid = uuid[:8] + '-' + uuid[8:12] + '-' + uuid[12:16] + '-' + uuid[16:20] + '-' + uuid[20:]
