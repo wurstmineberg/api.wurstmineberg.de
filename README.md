@@ -2,7 +2,7 @@ This is [Wurstmineberg](http://wurstmineberg.de/)'s Minecraft API, an API Server
 
 It can be found live on http://api.wurstmineberg.de/.
 
-This is version 1.4.0 of the API ([semver](http://semver.org/)). A list of available endpoints along with brief documentation can be found on its index page.
+This is version 1.5.0 of the API ([semver](http://semver.org/)). A list of available endpoints along with brief documentation can be found on its index page.
 
 Configuration
 =============

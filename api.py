@@ -3,19 +3,7 @@
 Wurstmineberg API server
 '''
 
-LOGS = '/opt/wurstmineberg/log'
-PEOPLE_JSON_FILENAME = '/opt/wurstmineberg/config/people.json'
-SERVERLOCATION = '/opt/wurstmineberg/server/wurstmineberg'
-WEB_ASSETS = '/opt/hub/wurstmineberg/wurstmineberg-web/static/json'
-
-DOCUMENTATION_INTRO = """
-<h1>Wurstmineberg API</h1>
-Welcome to the Wurstmineberg API. Feel free to play around!<br>
-<br>
-Currently available API endpoints:
-"""
-
-__version__ = '1.4.0'
+__version__ = '1.5.0'
 
 import json
 import os
@@ -24,6 +12,19 @@ import time
 
 from bottle import *
 from nbt import *
+
+LOGS = '/opt/wurstmineberg/log'
+PEOPLE_JSON_FILENAME = '/opt/wurstmineberg/config/people.json'
+SERVER_DIR = '/opt/wurstmineberg/server'
+WEB_ASSETS = '/opt/hub/wurstmineberg/wurstmineberg-web/static/json'
+WORLD_DIR = os.path.join(SERVER_DIR, 'wurstmineberg')
+
+DOCUMENTATION_INTRO = """
+<h1>Wurstmineberg API</h1>
+Welcome to the Wurstmineberg API. Feel free to play around!<br>
+<br>
+Currently available API endpoints:
+"""
 
 app = application = Bottle()
 
@@ -84,10 +85,17 @@ def nbt_to_dict(nbtfile):
 @app.route('/player/:player_minecraft_name/playerdata.json')
 def api_player_data(player_minecraft_name):
     '''
-    Returns the player data encoded as JSON
+    Returns the player data encoded as JSON, also accepts the player id instead of the Minecraft name
     '''
-    nbtfile = SERVERLOCATION + "/players/" + player_minecraft_name + ".dat"
-
+    nbtfile = os.path.join(WORLD_DIR, 'players', player_minecraft_name + '.dat')
+    if not os.path.exists(nbtfile):
+        for whitelist_entry in api_whitelist():
+            if whitelist_entry['name'] == player_minecraft_name:
+                uuid = whitelist_entry['uuid']
+        else:
+            uuid = api_player_info(player_minecraft_name)['minecraftUUID']
+        uuid = uuid[:8] + '-' + uuid[8:12] + '-' + uuid[12:16] + '-' + uuid[16:20] + '-' + uuid[20:]
+        nbtfile = os.path.join(WORLD_DIR, 'playerdata', uuid + '.dat')
     return nbtfile_to_dict(nbtfile)
 
 
@@ -96,7 +104,7 @@ def api_stats(player_minecraft_name):
     '''
     Returns the stats JSON file from the server
     '''
-    return static_file('/stats/' + player_minecraft_name + '.json', SERVERLOCATION)
+    return static_file('/stats/' + player_minecraft_name + '.json', WORLD_DIR)
 
 
 @app.route('/player/:player_id/info.json')
@@ -145,7 +153,7 @@ def api_scoreboard():
     '''
     Returns the scoreboard data encoded as JSON
     '''
-    nbtfile = SERVERLOCATION + "/data/scoreboard.dat"
+    nbtfile = WORLD_DIR + "/data/scoreboard.dat"
     return nbtfile_to_dict(nbtfile)
 
 
@@ -154,8 +162,17 @@ def api_level():
     '''
     Returns the level.dat encoded as JSON
     '''
-    nbtfile = SERVERLOCATION + "/level.dat"
+    nbtfile = WORLD_DIR + "/level.dat"
     return nbtfile_to_dict(nbtfile)
+
+
+@app.route('/server/whitelist.json')
+def api_whitelist():
+    '''
+    For UUID-based Minecraft servers (1.7.6 and later), returns the whitelist. For older servers, the behavior is undefined.
+    '''
+    with open(os.path.join(SERVER_DIR, 'whitelist.json')) as whitelist:
+        return json.load(whitelist)
 
 
 @app.route('/server/playerstats.json')
@@ -164,7 +181,7 @@ def api_playerstats():
     Returns all player stats in one file. This file can be potentially big. Please use one of the other APIs if possible.
     '''
     data = {}
-    directory = os.path.join(SERVERLOCATION, 'stats')
+    directory = os.path.join(WORLD_DIR, 'stats')
     for root, dirs, files in os.walk(directory):
         for file in files:
             if file.endswith(".json"):
@@ -281,7 +298,7 @@ def api_map_by_id(identifier):
     '''
     Returns info about the map item with damage value :identifier, see http://minecraft.gamepedia.com/Map_Item_Format for documentation
     '''
-    nbt_file = os.path.join(SERVERLOCATION, 'data', 'map_' + str(identifier) + '.dat')
+    nbt_file = os.path.join(WORLD_DIR, 'data', 'map_' + str(identifier) + '.dat')
     
     return nbtfile_to_dict(nbt_file)
 
@@ -292,7 +309,7 @@ def playernames():
     '''
     alldata = api_playerstats()
     data = []
-    directory = os.path.join(SERVERLOCATION, 'players')
+    directory = os.path.join(WORLD_DIR, 'players')
     for root, dirs, files in os.walk(directory):
         for file in files:
             if file.endswith(".dat"):
