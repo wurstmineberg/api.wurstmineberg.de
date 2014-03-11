@@ -3,7 +3,7 @@
 Wurstmineberg API server
 '''
 
-__version__ = '1.5.6'
+__version__ = '1.5.7'
 
 import json
 import os
@@ -193,12 +193,25 @@ def api_playerstats():
     Returns all player stats in one file. This file can be potentially big. Please use one of the other APIs if possible.
     '''
     data = {}
+    people = None
     directory = os.path.join(WORLD_DIR, 'stats')
     for root, dirs, files in os.walk(directory):
-        for file in files:
-            if file.endswith(".json"):
-                with open(os.path.join(directory, file), 'r') as playerfile:
-                    name = os.path.splitext(file)[0]
+        for file_name in files:
+            if file_name.endswith(".json"):
+                with open(os.path.join(directory, file_name), 'r') as playerfile:
+                    name = os.path.splitext(file_name)[0]
+                    uuid_filename = re.match('([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]+)$', name)
+                    if uuid_filename:
+                        uuid = ''.join(uuid_filename.groups())
+                        if people is None:
+                            with open(PEOPLE_JSON_FILENAME) as people_json:
+                                people = json.load(people_json)
+                                if isinstance(data, dict):
+                                    people = people['people']
+                        for person in people:
+                            if person.get('minecraftUUID') == uuid and 'minecraft' in person:
+                                name = person['minecraft']
+                                break
                     data[name] = json.loads(playerfile.read())
     return data
 
