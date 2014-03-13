@@ -3,7 +3,7 @@
 Wurstmineberg API server
 '''
 
-__version__ = '1.5.7'
+__version__ = '1.5.8'
 
 import json
 import os
@@ -95,7 +95,8 @@ def api_player_data(player_minecraft_name):
                 break
         else:
             uuid = api_player_info(player_minecraft_name)['minecraftUUID']
-        uuid = uuid[:8] + '-' + uuid[8:12] + '-' + uuid[12:16] + '-' + uuid[16:20] + '-' + uuid[20:]
+        if '-' not in uuid:
+            uuid = uuid[:8] + '-' + uuid[8:12] + '-' + uuid[12:16] + '-' + uuid[16:20] + '-' + uuid[20:]
         nbtfile = os.path.join(WORLD_DIR, 'playerdata', uuid + '.dat')
     return nbtfile_to_dict(nbtfile)
 
@@ -113,7 +114,8 @@ def api_stats(player_minecraft_name):
                 break
         else:
             uuid = api_player_info(player_minecraft_name)['minecraftUUID']
-        uuid = uuid[:8] + '-' + uuid[8:12] + '-' + uuid[12:16] + '-' + uuid[16:20] + '-' + uuid[20:]
+        if '-' not in uuid:
+            uuid = uuid[:8] + '-' + uuid[8:12] + '-' + uuid[12:16] + '-' + uuid[16:20] + '-' + uuid[20:]
         stats_file = os.path.join(WORLD_DIR, 'stats', uuid + '.json')
     with open(stats_file) as stats:
         return json.load(stats)
@@ -209,7 +211,7 @@ def api_playerstats():
                                 if isinstance(data, dict):
                                     people = people['people']
                         for person in people:
-                            if person.get('minecraftUUID') == uuid and 'minecraft' in person:
+                            if (person.get('minecraftUUID') == uuid or person.get('minecraftUUID') == name) and 'minecraft' in person:
                                 name = person['minecraft']
                                 break
                     data[name] = json.loads(playerfile.read())
