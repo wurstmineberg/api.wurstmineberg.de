@@ -3,7 +3,7 @@
 Wurstmineberg API server
 '''
 
-__version__ = '1.6.0'
+__version__ = '1.6.1'
 
 import json
 import os
@@ -209,7 +209,7 @@ def api_latest_deaths():
     people_ids = {}
     with open(PEOPLE_JSON_FILENAME) as people_json:
         people_data = json.load(people_json)
-        if isinstance(data, dict):
+        if isinstance(people_data, dict):
             people_data = people_data['people']
         for person in people_data:
             if 'id' in person and 'minecraft' in person:
