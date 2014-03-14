@@ -3,7 +3,7 @@
 Wurstmineberg API server
 '''
 
-__version__ = '1.5.8'
+__version__ = '1.6.0'
 
 import json
 import os
@@ -69,7 +69,6 @@ def playernames():
     '''
     Returns all player names it can find
     '''
-    alldata = api_playerstats()
     try:
         data = [entry['name'] for entry in json.loads(api_whitelist())]
     except:
@@ -200,6 +199,35 @@ def api_stats(player_minecraft_name):
         stats_file = os.path.join(WORLD_DIR, 'stats', uuid + '.json')
     with open(stats_file) as stats:
         return json.load(stats)
+
+@app.route('/server/deaths/latest.json')
+def api_latest_deaths():
+    '''
+    Returns JSON containing information about the most recent death of each player
+    '''
+    last_person = None
+    people_ids = {}
+    with open(PEOPLE_JSON_FILENAME) as people_json:
+        people_data = json.load(people_json)
+        if isinstance(data, dict):
+            people_data = people_data['people']
+        for person in people_data:
+            if 'id' in person and 'minecraft' in person:
+                people_ids[person['minecraft']] = person['id']
+    deaths = {}
+    with open(os.path.join(LOGS, 'deaths.log')) as deaths_log:
+        for line in log:
+            match = re.match('([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([^@ ]+) (.*)', line)
+            if match and match.group(2) in people_ids:
+                last_person = person_id = people_ids[match.group(2)]
+                deaths[person_id] = {
+                    'cause': match.group(3),
+                    'timestamp': match.group(1)
+                }
+    return {
+        'deaths': deaths,
+        'lastPerson': last_person
+    }
 
 @app.route('/server/level.json')
 def api_level():
