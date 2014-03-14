@@ -3,7 +3,7 @@
 Wurstmineberg API server
 '''
 
-__version__ = '1.6.1'
+__version__ = '1.6.2'
 
 import json
 import os
@@ -216,7 +216,7 @@ def api_latest_deaths():
                 people_ids[person['minecraft']] = person['id']
     deaths = {}
     with open(os.path.join(LOGS, 'deaths.log')) as deaths_log:
-        for line in log:
+        for line in deaths_log:
             match = re.match('([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([^@ ]+) (.*)', line)
             if match and match.group(2) in people_ids:
                 last_person = person_id = people_ids[match.group(2)]
