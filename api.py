@@ -28,22 +28,6 @@ Currently available API endpoints:
 
 app = application = Bottle()
 
-
-@app.route('/')
-def show_index():
-    '''
-    The documentation page
-    '''
-    documentation = '<p>' + DOCUMENTATION_INTRO + '</p>'
-    documentation += '<table id="api-endpoints"><tbody>\n'
-    documentation += '<tr><th style="text-align: left">Endpoint</th><th style="text-align: left">Description</th>\n'
-    for route in app.routes:
-        documentation += "\n<tr><td>" + route.rule + \
-            "</td><td>" + str(route.callback.__doc__) + '</td></tr>'
-    documentation += '</tbody></table>'
-    return documentation
-
-
 def nbtfile_to_dict(filename):
     nbtfile = nbt.NBTFile(filename)
     nbtdict = nbt_to_dict(nbtfile)
@@ -81,255 +65,6 @@ def nbt_to_dict(nbtfile):
     else:
         return collection
 
-
-@app.route('/player/:player_minecraft_name/playerdata.json')
-def api_player_data(player_minecraft_name):
-    '''
-    Returns the player data encoded as JSON, also accepts the player id instead of the Minecraft name
-    '''
-    nbtfile = os.path.join(WORLD_DIR, 'players', player_minecraft_name + '.dat')
-    if not os.path.exists(nbtfile):
-        for whitelist_entry in json.loads(api_whitelist()):
-            if whitelist_entry['name'] == player_minecraft_name:
-                uuid = whitelist_entry['uuid']
-                break
-        else:
-            uuid = api_player_info(player_minecraft_name)['minecraftUUID']
-        if '-' not in uuid:
-            uuid = uuid[:8] + '-' + uuid[8:12] + '-' + uuid[12:16] + '-' + uuid[16:20] + '-' + uuid[20:]
-        nbtfile = os.path.join(WORLD_DIR, 'playerdata', uuid + '.dat')
-    return nbtfile_to_dict(nbtfile)
-
-
-@app.route('/player/:player_minecraft_name/stats.json')
-def api_stats(player_minecraft_name):
-    '''
-    Returns the stats JSON file from the server, also accepts the player id instead of the Minecraft name
-    '''
-    stats_file = os.path.join(WORLD_DIR, 'stats', player_minecraft_name + '.json')
-    if not os.path.exists(stats_file):
-        for whitelist_entry in json.loads(api_whitelist()):
-            if whitelist_entry['name'] == player_minecraft_name:
-                uuid = whitelist_entry['uuid']
-                break
-        else:
-            uuid = api_player_info(player_minecraft_name)['minecraftUUID']
-        if '-' not in uuid:
-            uuid = uuid[:8] + '-' + uuid[8:12] + '-' + uuid[12:16] + '-' + uuid[16:20] + '-' + uuid[20:]
-        stats_file = os.path.join(WORLD_DIR, 'stats', uuid + '.json')
-    with open(stats_file) as stats:
-        return json.load(stats)
-
-
-@app.route('/player/:player_id/info.json')
-def api_player_info(player_id):
-    '''
-    Returns the section of people.json that corresponds to the player
-    '''
-    person_data = None
-    with open(PEOPLE_JSON_FILENAME) as people_json:
-        data = json.load(people_json)
-        if isinstance(data, dict):
-            data = data['people']
-        person_data = list(filter(lambda a: player_id == a['id'], data))[0]
-    return person_data
-
-
-@app.route('/server/playerdata.json')
-def api_player_data_all():
-    '''
-    Returns all the player data encoded as JSON
-    '''
-    nbtdicts = {}
-    for user in playernames():
-        nbtdata = api_player_data(user)
-        nbtdicts[user] = nbtdata
-    return nbtdicts
-
-
-@app.route('/server/playerdata/by-id/:identifier')
-def api_player_data_by_id(identifier):
-    '''
-    Returns all the player data with the specified ID
-    '''
-    all_data = api_player_data_all()
-    data = {}
-    for player in all_data:
-        playerdata = all_data[player]
-        for name in playerdata:
-            if name == identifier:
-                data[player] = playerdata[name]
-    return data
-
-
-@app.route('/server/scoreboard.json')
-def api_scoreboard():
-    '''
-    Returns the scoreboard data encoded as JSON
-    '''
-    nbtfile = WORLD_DIR + "/data/scoreboard.dat"
-    return nbtfile_to_dict(nbtfile)
-
-
-@app.route('/server/level.json')
-def api_level():
-    '''
-    Returns the level.dat encoded as JSON
-    '''
-    nbtfile = WORLD_DIR + "/level.dat"
-    return nbtfile_to_dict(nbtfile)
-
-
-@app.route('/server/whitelist.json')
-def api_whitelist():
-    '''
-    For UUID-based Minecraft servers (1.7.6 and later), returns the whitelist. For older servers, the behavior is undefined.
-    '''
-    with open(os.path.join(SERVER_DIR, 'whitelist.json')) as whitelist:
-        return whitelist.read()
-
-
-@app.route('/server/playerstats.json')
-def api_playerstats():
-    '''
-    Returns all player stats in one file. This file can be potentially big. Please use one of the other APIs if possible.
-    '''
-    data = {}
-    people = None
-    directory = os.path.join(WORLD_DIR, 'stats')
-    for root, dirs, files in os.walk(directory):
-        for file_name in files:
-            if file_name.endswith(".json"):
-                with open(os.path.join(directory, file_name), 'r') as playerfile:
-                    name = os.path.splitext(file_name)[0]
-                    uuid_filename = re.match('([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]+)$', name)
-                    if uuid_filename:
-                        uuid = ''.join(uuid_filename.groups())
-                        if people is None:
-                            with open(PEOPLE_JSON_FILENAME) as people_json:
-                                people = json.load(people_json)
-                                if isinstance(data, dict):
-                                    people = people['people']
-                        for person in people:
-                            if (person.get('minecraftUUID') == uuid or person.get('minecraftUUID') == name) and 'minecraft' in person:
-                                name = person['minecraft']
-                                break
-                    data[name] = json.loads(playerfile.read())
-    return data
-
-
-@app.route('/server/playerstats/general.json')
-def api_playerstats_general():
-    '''
-    Returns all general stats in one file
-    '''
-    alldata = api_playerstats()
-    data = {}
-    nonGeneralActions = [
-        'useItem', 'craftItem', 'breakItem', 'mineBlock', 'killEntity', 'entityKilledBy']
-
-    for player in alldata:
-        playerdata = alldata[player]
-        playerdict = {}
-        for statstr in playerdata:
-            value = playerdata[statstr]
-            stat = statstr.split('.')
-            if stat[0] == 'stat' and stat[1] not in nonGeneralActions:
-                playerdict[statstr] = value
-        data[player] = playerdict
-    return data
-
-
-@app.route('/server/playerstats/item.json')
-def api_playerstats_items():
-    '''
-    Returns all item and block stats in one file
-    '''
-    alldata = api_playerstats()
-    data = {}
-    itemActions = ['useItem', 'craftItem', 'breakItem', 'mineBlock']
-
-    for player in alldata:
-        playerdata = alldata[player]
-        playerdict = {}
-        for statstr in playerdata:
-            value = playerdata[statstr]
-            stat = statstr.split('.')
-            if stat[0] == 'stat' and stat[1] in itemActions:
-                playerdict[statstr] = value
-        data[player] = playerdict
-    return data
-
-
-@app.route('/server/playerstats/entity.json')
-def api_playerstats_entities():
-    '''
-    Returns all entity stats in one file
-    '''
-    alldata = api_playerstats()
-    data = {}
-    entityActions = ['killEntity', 'entityKilledBy']
-
-    for player in alldata:
-        playerdata = alldata[player]
-        playerdict = {}
-        for statstr in playerdata:
-            value = playerdata[statstr]
-            stat = statstr.split('.')
-            if stat[0] == 'stat' and stat[1] in entityActions:
-                playerdict[statstr] = value
-        data[player] = playerdict
-    return data
-
-
-@app.route('/server/playerstats/achievement.json')
-def api_playerstats_achievements():
-    '''
-    Returns all achievement stats in one file
-    '''
-    alldata = api_playerstats()
-    data = {}
-
-    for player in alldata:
-        playerdata = alldata[player]
-        playerdict = {}
-        for statstr in playerdata:
-            value = playerdata[statstr]
-            stat = statstr.split('.')
-            if stat[0] == 'achievement':
-                playerdict[statstr] = value
-        data[player] = playerdict
-    return data
-
-
-@app.route('/server/playerstats/by-id/:identifier')
-def api_playerstats_by_id(identifier):
-    '''
-    Returns the stat item :identifier from all player stats
-    '''
-    alldata = api_playerstats()
-
-    data = {}
-    for player in alldata:
-        playerdata = alldata[player]
-        playerdict = {}
-        if identifier in playerdata:
-            data[player] = playerdata[identifier]
-    if len(data) == 0:
-        abort(404, "Identifier not found")
-    return data
-
-
-@app.route('/server/maps/by-id/:identifier')
-def api_map_by_id(identifier):
-    '''
-    Returns info about the map item with damage value :identifier, see http://minecraft.gamepedia.com/Map_Item_Format for documentation
-    '''
-    nbt_file = os.path.join(WORLD_DIR, 'data', 'map_' + str(identifier) + '.dat')
-    
-    return nbtfile_to_dict(nbt_file)
-
-
 def playernames():
     '''
     Returns all player names it can find
@@ -347,14 +82,27 @@ def playernames():
                 data.append(name)
     return data
 
-
-@app.route('/server/playernames.json')
-def api_playernames():
+@app.route('/')
+def show_index():
     '''
-    Returns all player names it can find
+    The documentation page
     '''
-    return json.dumps(playernames())
+    documentation = '<p>' + DOCUMENTATION_INTRO + '</p>'
+    documentation += '<table id="api-endpoints"><tbody>\n'
+    documentation += '<tr><th style="text-align: left">Endpoint</th><th style="text-align: left">Description</th>\n'
+    for route in app.routes:
+        documentation += "\n<tr><td>" + route.rule + \
+            "</td><td>" + str(route.callback.__doc__) + '</td></tr>'
+    documentation += '</tbody></table>'
+    return documentation
 
+@app.route('/deathgames/log.json')
+def api_death_games_log():
+    '''
+    Returns the Death Games log, listing attempts in chronological order. See http://wiki.wurstmineberg.de/Death_Games for more info.
+    '''
+    with open(os.path.join(LOGS, 'deathgames.json')) as death_games_logfile:
+        return json.load(death_games_logfile)
 
 @app.route('/minecraft/items/all.json')
 def api_all_items():
@@ -363,15 +111,6 @@ def api_all_items():
     '''
     with open(os.path.join(WEB_ASSETS, 'items.json')) as items_file:
         return json.load(items_file)
-
-
-@app.route('/minecraft/items/by-id/:item_id')
-def api_item_by_id(item_id):
-    '''
-    Returns the item info for an item with the given numeric or text ID and the default damage value. Note that text IDs may be ambiguous and will return an arbitrary matching item.
-    '''
-    return api_item_by_damage(item_id, None)
-
 
 @app.route('/minecraft/items/by-damage/:item_id/:item_damage')
 def api_item_by_damage(item_id, item_damage):
@@ -405,31 +144,260 @@ def api_item_by_damage(item_id, item_damage):
         del ret['damageValues']
     return ret
 
+@app.route('/minecraft/items/by-id/:item_id')
+def api_item_by_id(item_id):
+    '''
+    Returns the item info for an item with the given numeric or text ID and the default damage value. Note that text IDs may be ambiguous and will return an arbitrary matching item.
+    '''
+    return api_item_by_damage(item_id, None)
 
-@app.route('/deathgames/log.json')
-def api_death_games_log():
+@app.route('/player/:player_id/info.json')
+def api_player_info(player_id):
     '''
-    Returns the Death Games log, listing attempts in chronological order. See http://wiki.wurstmineberg.de/Death_Games for more info.
+    Returns the section of people.json that corresponds to the player
     '''
-    with open(os.path.join(LOGS, 'deathgames.json')) as death_games_logfile:
-        return json.load(death_games_logfile)
+    person_data = None
+    with open(PEOPLE_JSON_FILENAME) as people_json:
+        data = json.load(people_json)
+        if isinstance(data, dict):
+            data = data['people']
+        person_data = list(filter(lambda a: player_id == a['id'], data))[0]
+    return person_data
+
+@app.route('/player/:player_minecraft_name/playerdata.json')
+def api_player_data(player_minecraft_name):
+    '''
+    Returns the player data encoded as JSON, also accepts the player id instead of the Minecraft name
+    '''
+    nbtfile = os.path.join(WORLD_DIR, 'players', player_minecraft_name + '.dat')
+    if not os.path.exists(nbtfile):
+        for whitelist_entry in json.loads(api_whitelist()):
+            if whitelist_entry['name'] == player_minecraft_name:
+                uuid = whitelist_entry['uuid']
+                break
+        else:
+            uuid = api_player_info(player_minecraft_name)['minecraftUUID']
+        if '-' not in uuid:
+            uuid = uuid[:8] + '-' + uuid[8:12] + '-' + uuid[12:16] + '-' + uuid[16:20] + '-' + uuid[20:]
+        nbtfile = os.path.join(WORLD_DIR, 'playerdata', uuid + '.dat')
+    return nbtfile_to_dict(nbtfile)
+
+@app.route('/player/:player_minecraft_name/stats.json')
+def api_stats(player_minecraft_name):
+    '''
+    Returns the stats JSON file from the server, also accepts the player id instead of the Minecraft name
+    '''
+    stats_file = os.path.join(WORLD_DIR, 'stats', player_minecraft_name + '.json')
+    if not os.path.exists(stats_file):
+        for whitelist_entry in json.loads(api_whitelist()):
+            if whitelist_entry['name'] == player_minecraft_name:
+                uuid = whitelist_entry['uuid']
+                break
+        else:
+            uuid = api_player_info(player_minecraft_name)['minecraftUUID']
+        if '-' not in uuid:
+            uuid = uuid[:8] + '-' + uuid[8:12] + '-' + uuid[12:16] + '-' + uuid[16:20] + '-' + uuid[20:]
+        stats_file = os.path.join(WORLD_DIR, 'stats', uuid + '.json')
+    with open(stats_file) as stats:
+        return json.load(stats)
+
+@app.route('/server/level.json')
+def api_level():
+    '''
+    Returns the level.dat encoded as JSON
+    '''
+    nbtfile = WORLD_DIR + "/level.dat"
+    return nbtfile_to_dict(nbtfile)
+
+@app.route('/server/maps/by-id/:identifier')
+def api_map_by_id(identifier):
+    '''
+    Returns info about the map item with damage value :identifier, see http://minecraft.gamepedia.com/Map_Item_Format for documentation
+    '''
+    nbt_file = os.path.join(WORLD_DIR, 'data', 'map_' + str(identifier) + '.dat')
+
+    return nbtfile_to_dict(nbt_file)
+
+@app.route('/server/playerdata/by-id/:identifier')
+def api_player_data_by_id(identifier):
+    '''
+    Returns all the player data with the specified ID
+    '''
+    all_data = api_player_data_all()
+    data = {}
+    for player in all_data:
+        playerdata = all_data[player]
+        for name in playerdata:
+            if name == identifier:
+                data[player] = playerdata[name]
+    return data
+
+@app.route('/server/playerdata.json')
+def api_player_data_all():
+    '''
+    Returns all the player data encoded as JSON
+    '''
+    nbtdicts = {}
+    for user in playernames():
+        nbtdata = api_player_data(user)
+        nbtdicts[user] = nbtdata
+    return nbtdicts
+
+@app.route('/server/playernames.json')
+def api_playernames():
+    '''
+    Returns all player names it can find
+    '''
+    return json.dumps(playernames())
+
+@app.route('/server/playerstats.json')
+def api_playerstats():
+    '''
+    Returns all player stats in one file. This file can be potentially big. Please use one of the other APIs if possible.
+    '''
+    data = {}
+    people = None
+    directory = os.path.join(WORLD_DIR, 'stats')
+    for root, dirs, files in os.walk(directory):
+        for file_name in files:
+            if file_name.endswith(".json"):
+                with open(os.path.join(directory, file_name), 'r') as playerfile:
+                    name = os.path.splitext(file_name)[0]
+                    uuid_filename = re.match('([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]+)$', name)
+                    if uuid_filename:
+                        uuid = ''.join(uuid_filename.groups())
+                        if people is None:
+                            with open(PEOPLE_JSON_FILENAME) as people_json:
+                                people = json.load(people_json)
+                                if isinstance(data, dict):
+                                    people = people['people']
+                        for person in people:
+                            if (person.get('minecraftUUID') == uuid or person.get('minecraftUUID') == name) and 'minecraft' in person:
+                                name = person['minecraft']
+                                break
+                    data[name] = json.loads(playerfile.read())
+    return data
+
+@app.route('/server/playerstats/achievement.json')
+def api_playerstats_achievements():
+    '''
+    Returns all achievement stats in one file
+    '''
+    alldata = api_playerstats()
+    data = {}
+    for player in alldata:
+        playerdata = alldata[player]
+        playerdict = {}
+        for statstr in playerdata:
+            value = playerdata[statstr]
+            stat = statstr.split('.')
+            if stat[0] == 'achievement':
+                playerdict[statstr] = value
+        data[player] = playerdict
+    return data
+
+@app.route('/server/playerstats/by-id/:identifier')
+def api_playerstats_by_id(identifier):
+    '''
+    Returns the stat item :identifier from all player stats
+    '''
+    alldata = api_playerstats()
+    data = {}
+    for player in alldata:
+        playerdata = alldata[player]
+        playerdict = {}
+        if identifier in playerdata:
+            data[player] = playerdata[identifier]
+    if len(data) == 0:
+        abort(404, "Identifier not found")
+    return data
+
+@app.route('/server/playerstats/entity.json')
+def api_playerstats_entities():
+    '''
+    Returns all entity stats in one file
+    '''
+    alldata = api_playerstats()
+    data = {}
+    entityActions = ['killEntity', 'entityKilledBy']
+    for player in alldata:
+        playerdata = alldata[player]
+        playerdict = {}
+        for statstr in playerdata:
+            value = playerdata[statstr]
+            stat = statstr.split('.')
+            if stat[0] == 'stat' and stat[1] in entityActions:
+                playerdict[statstr] = value
+        data[player] = playerdict
+    return data
+
+@app.route('/server/playerstats/general.json')
+def api_playerstats_general():
+    '''
+    Returns all general stats in one file
+    '''
+    alldata = api_playerstats()
+    data = {}
+    nonGeneralActions = [
+        'useItem', 'craftItem', 'breakItem', 'mineBlock', 'killEntity', 'entityKilledBy']
+    for player in alldata:
+        playerdata = alldata[player]
+        playerdict = {}
+        for statstr in playerdata:
+            value = playerdata[statstr]
+            stat = statstr.split('.')
+            if stat[0] == 'stat' and stat[1] not in nonGeneralActions:
+                playerdict[statstr] = value
+        data[player] = playerdict
+    return data
+
+@app.route('/server/playerstats/item.json')
+def api_playerstats_items():
+    '''
+    Returns all item and block stats in one file
+    '''
+    alldata = api_playerstats()
+    data = {}
+    itemActions = ['useItem', 'craftItem', 'breakItem', 'mineBlock']
+    for player in alldata:
+        playerdata = alldata[player]
+        playerdict = {}
+        for statstr in playerdata:
+            value = playerdata[statstr]
+            stat = statstr.split('.')
+            if stat[0] == 'stat' and stat[1] in itemActions:
+                playerdict[statstr] = value
+        data[player] = playerdict
+    return data
+
+@app.route('/server/scoreboard.json')
+def api_scoreboard():
+    '''
+    Returns the scoreboard data encoded as JSON
+    '''
+    nbtfile = WORLD_DIR + "/data/scoreboard.dat"
+    return nbtfile_to_dict(nbtfile)
+
+@app.route('/server/whitelist.json')
+def api_whitelist():
+    '''
+    For UUID-based Minecraft servers (1.7.6 and later), returns the whitelist. For older servers, the behavior is undefined.
+    '''
+    with open(os.path.join(SERVER_DIR, 'whitelist.json')) as whitelist:
+        return whitelist.read()
 
 
 class StripPathMiddleware(object):
-
     '''
     Get that slash out of the request
     '''
-
+    
     def __init__(self, a):
         self.a = a
-
+    
     def __call__(self, e, h):
         e['PATH_INFO'] = e['PATH_INFO'].rstrip('/')
         return self.a(e, h)
 
 if __name__ == '__main__':
-    run(app=StripPathMiddleware(app),
-        server='python_server',
-        host='0.0.0.0',
-        port=8080)
+    run(app=StripPathMiddleware(app), server='python_server', host='0.0.0.0', port=8080)
