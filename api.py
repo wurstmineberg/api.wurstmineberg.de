@@ -3,7 +3,7 @@
 Wurstmineberg API server
 '''
 
-__version__ = '1.7.1'
+__version__ = '1.8.0'
 
 import json
 import os
@@ -408,6 +408,9 @@ def api_scoreboard():
 
 @app.route('/server/sessions/overview.json')
 def api_sessions():
+    '''
+    Returns known players' sessions since the first recorded server restart
+    '''
     uptimes = []
     current_uptime = None
     matches = {
