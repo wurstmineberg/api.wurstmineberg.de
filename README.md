@@ -1,4 +1,4 @@
-This is [Wurstmineberg](http://wurstmineberg.de/)'s Minecraft API, an API Server using [bottle.py](http://bottlepy.org/) that exposes [Minecraft](http://minecraft.net/) server data via [JSON](http://www.json.org/).
+This is [Wurstmineberg](http://wurstmineberg.de/)'s Minecraft API, an API server using [bottle.py](http://bottlepy.org/) that exposes [Minecraft](http://minecraft.net/) server data via [JSON](http://www.json.org/). It is not to be confused with Minecraft's official API which is currently in development.
 
 It can be found live on http://api.wurstmineberg.de/.
 
