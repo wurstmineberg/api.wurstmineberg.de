@@ -3,7 +3,7 @@
 Wurstmineberg API server
 '''
 
-__version__ = '1.6.2'
+__version__ = '1.7.0'
 
 import json
 import os
@@ -405,6 +405,47 @@ def api_scoreboard():
     '''
     nbtfile = WORLD_DIR + "/data/scoreboard.dat"
     return nbtfile_to_dict(nbtfile)
+
+@app.route('/server/sessions/overview.json')
+def api_sessions():
+    uptimes = []
+    current_uptime = None
+    matches = {
+        'join': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([a-z0-9]+|\\?) joined ([A-Za-z0-9_]{1,16})',
+        'leave': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([a-z0-9]+|\\?) left ([A-Za-z0-9_]{1,16})',
+        'restart': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) @restart'
+    }
+    with open(os.path.join(LOGS, 'logins.log')) as logins_log:
+        for line in logins_log:
+            for match_type, match_string in matches.items():
+                match = re.match(match_string, log_line)
+                if match:
+                    break
+            else:
+                continue
+            if match_type == 'restart':
+                if current_uptime is not None:
+                    current_uptime['endTime'] = match.group(1)
+                    uptimes.append(current_uptime)
+                current_uptime = {'startTime': match.group(1)}
+            elif current_uptime is None or match.group(2) == '?':
+                continue
+            elif match_type == 'join':
+                if 'sessions' not in current_uptime:
+                    current_uptime['sessions'] = []
+                current_uptime['sessions'].append({
+                    'joinTime': match.group(1),
+                    'minecraftNick': match.group(3),
+                    'person': match.group(2)
+                })
+            elif match_type == 'leave':
+                for session in current_uptime.get('sessions', []):
+                    if 'leaveTime' not in session and session['person'] == match.group(2):
+                        session['leaveTime'] = match.group(1)
+                        break
+    if current_uptime is not None:
+        uptimes.append(current_uptime)
+    return {'uptimes': uptimes}
 
 @app.route('/server/whitelist.json')
 def api_whitelist():
