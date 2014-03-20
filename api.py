@@ -3,7 +3,7 @@
 Wurstmineberg API server
 '''
 
-__version__ = '1.7.0'
+__version__ = '1.7.1'
 
 import json
 import os
@@ -416,7 +416,7 @@ def api_sessions():
         'restart': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) @restart'
     }
     with open(os.path.join(LOGS, 'logins.log')) as logins_log:
-        for line in logins_log:
+        for log_line in logins_log:
             for match_type, match_string in matches.items():
                 match = re.match(match_string, log_line)
                 if match:
