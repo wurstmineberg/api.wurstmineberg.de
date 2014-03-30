@@ -5,6 +5,7 @@ Wurstmineberg API server
 
 __version__ = '1.8.0'
 
+from datetime import datetime
 import json
 import os
 import re
@@ -449,6 +450,46 @@ def api_sessions():
     if current_uptime is not None:
         uptimes.append(current_uptime)
     return {'uptimes': uptimes}
+
+@app.route('/server/sessions/lastseen.json')
+def api_sessions_last_seen():
+    '''
+    Returns the last known session for each player
+    '''
+    matches = {
+        'join': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([a-z0-9]+|\\?) joined ([A-Za-z0-9_]{1,16})',
+        'leave': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([a-z0-9]+|\\?) left ([A-Za-z0-9_]{1,16})',
+        'restart': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) @restart'
+    }
+    ret = {}
+    with open(os.path.join(LOGS, 'logins.log')) as logins_log:
+        for line in logins_log:
+            for match_type, match_string in matches.items():
+                match = re.match(match_string, log_line)
+                if match:
+                    break
+            else:
+                continue
+            if match_type == 'restart':
+                for session in ret.values():
+                    if 'leaveTime' not in session:
+                        session['leaveTime'] = match.group(1)
+                        session['leaveReason'] = 'restart'
+            elif match_type == 'join':
+                ret[match.group(2)] = {
+                    'joinTime': match.group(1),
+                    'minecraftNick': match.group(3),
+                    'person': match.group(2)
+                }
+            elif match_type == 'leave':
+                if match.group(2) not in ret:
+                    continue
+                ret[match.group(2)]['leaveTime'] = match.group(1)
+                ret[match.group(2)]['leaveReason'] = 'logout'
+    for session in ret.values():
+        if 'leaveTime' not in session:
+            session['leaveReason'] = 'currentlyOnline'
+    return ret
 
 @app.route('/server/whitelist.json')
 def api_whitelist():
