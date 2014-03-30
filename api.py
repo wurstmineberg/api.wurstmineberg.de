@@ -463,7 +463,7 @@ def api_sessions_last_seen():
     }
     ret = {}
     with open(os.path.join(LOGS, 'logins.log')) as logins_log:
-        for line in logins_log:
+        for log_line in logins_log:
             for match_type, match_string in matches.items():
                 match = re.match(match_string, log_line)
                 if match:
