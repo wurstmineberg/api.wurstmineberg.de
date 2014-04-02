@@ -476,6 +476,8 @@ def api_sessions_last_seen():
                         session['leaveTime'] = match.group(1)
                         session['leaveReason'] = 'restart'
             elif match_type == 'join':
+                if match.group(2) == '?':
+                    continue
                 ret[match.group(2)] = {
                     'joinTime': match.group(1),
                     'minecraftNick': match.group(3),
