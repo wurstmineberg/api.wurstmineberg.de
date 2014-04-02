@@ -430,6 +430,10 @@ def api_sessions():
             if match_type == 'restart':
                 if current_uptime is not None:
                     current_uptime['endTime'] = match.group(1)
+                    for session in current_uptime.get('sessions', []):
+                        if 'leaveTime' not in session:
+                            session['leaveTime'] = match.group(1)
+                            session['leaveReason'] = 'restart'
                     uptimes.append(current_uptime)
                 current_uptime = {'startTime': match.group(1)}
             elif current_uptime is None or match.group(2) == '?':
@@ -446,8 +450,12 @@ def api_sessions():
                 for session in current_uptime.get('sessions', []):
                     if 'leaveTime' not in session and session['person'] == match.group(2):
                         session['leaveTime'] = match.group(1)
+                        session['leaveReason'] = 'logout'
                         break
     if current_uptime is not None:
+        for session in current_uptime.get('sessions', []):
+            if 'leaveTime' not in session:
+                session['leaveReason'] = 'currentlyOnline'
         uptimes.append(current_uptime)
     return {'uptimes': uptimes}
 
