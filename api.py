@@ -14,11 +14,7 @@ import time
 from bottle import *
 from nbt import *
 
-LOGS = '/opt/wurstmineberg/log'
-PEOPLE_JSON_FILENAME = '/opt/wurstmineberg/config/people.json'
-SERVER_DIR = '/opt/wurstmineberg/server'
-WEB_ASSETS = '/opt/hub/wurstmineberg/wurstmineberg-web/static/json'
-WORLD_DIR = os.path.join(SERVER_DIR, 'wurstmineberg')
+CONFIG_PATH = '/opt/wurstmineberg/config/api.json'
 
 DOCUMENTATION_INTRO = """
 <h1>Wurstmineberg API</h1>
@@ -28,6 +24,23 @@ Currently available API endpoints:
 """
 
 app = application = Bottle()
+
+def config(key=None):
+    default_config = {
+        'logPath': '/opt/wurstmineberg/log',
+        'peopleFile': '/opt/wurstmineberg/config/people.json',
+        'serverDir': '/opt/wurstmineberg/server',
+        'webAssets': '/opt/hub/wurstmineberg/assets.wurstmineberg.de/json',
+        'worldName': 'wurstmineberg'
+    }
+    try:
+        with open(CONFIG_PATH) as config_file:
+            j = json.load(config_file)
+    except:
+        j = default_config
+    if key is None:
+        return j
+    return j.get(key, default_config.get(key))
 
 def nbtfile_to_dict(filename):
     nbtfile = nbt.NBTFile(filename)
@@ -74,7 +87,7 @@ def playernames():
         data = [entry['name'] for entry in json.loads(api_whitelist())]
     except:
         data = []
-    directory = os.path.join(WORLD_DIR, 'players')
+    directory = os.path.join(config('serverDir'), config('worldName'), 'players')
     for root, dirs, files in os.walk(directory):
         for file in files:
             if file.endswith(".dat"):
@@ -101,7 +114,7 @@ def api_death_games_log():
     '''
     Returns the Death Games log, listing attempts in chronological order. See http://wiki.wurstmineberg.de/Death_Games for more info.
     '''
-    with open(os.path.join(LOGS, 'deathgames.json')) as death_games_logfile:
+    with open(os.path.join(config('logPath'), 'deathgames.json')) as death_games_logfile:
         return json.load(death_games_logfile)
 
 @app.route('/minecraft/items/all.json')
@@ -109,7 +122,7 @@ def api_all_items():
     '''
     Returns the item info JSON file, see https://github.com/wurstmineberg/wurstmineberg-web/blob/master/static/json/items.json.description.txt for documentation
     '''
-    with open(os.path.join(WEB_ASSETS, 'items.json')) as items_file:
+    with open(os.path.join(config('webAssets'), 'items.json')) as items_file:
         return json.load(items_file)
 
 @app.route('/minecraft/items/by-damage/:item_id/:item_damage')
@@ -157,7 +170,7 @@ def api_player_info(player_id):
     Returns the section of people.json that corresponds to the player
     '''
     person_data = None
-    with open(PEOPLE_JSON_FILENAME) as people_json:
+    with open(config('peopleFile')) as people_json:
         data = json.load(people_json)
         if isinstance(data, dict):
             data = data['people']
@@ -169,7 +182,7 @@ def api_player_data(player_minecraft_name):
     '''
     Returns the player data encoded as JSON, also accepts the player id instead of the Minecraft name
     '''
-    nbtfile = os.path.join(WORLD_DIR, 'players', player_minecraft_name + '.dat')
+    nbtfile = os.path.join(config('serverDir'), config('worldName'), 'players', player_minecraft_name + '.dat')
     if not os.path.exists(nbtfile):
         for whitelist_entry in json.loads(api_whitelist()):
             if whitelist_entry['name'] == player_minecraft_name:
@@ -179,7 +192,7 @@ def api_player_data(player_minecraft_name):
             uuid = api_player_info(player_minecraft_name)['minecraftUUID']
         if '-' not in uuid:
             uuid = uuid[:8] + '-' + uuid[8:12] + '-' + uuid[12:16] + '-' + uuid[16:20] + '-' + uuid[20:]
-        nbtfile = os.path.join(WORLD_DIR, 'playerdata', uuid + '.dat')
+        nbtfile = os.path.join(config('serverDir'), config('worldName'), 'playerdata', uuid + '.dat')
     return nbtfile_to_dict(nbtfile)
 
 @app.route('/player/:player_minecraft_name/stats.json')
@@ -187,7 +200,7 @@ def api_stats(player_minecraft_name):
     '''
     Returns the stats JSON file from the server, also accepts the player id instead of the Minecraft name
     '''
-    stats_file = os.path.join(WORLD_DIR, 'stats', player_minecraft_name + '.json')
+    stats_file = os.path.join(config('serverDir'), config('worldName'), 'stats', player_minecraft_name + '.json')
     if not os.path.exists(stats_file):
         for whitelist_entry in json.loads(api_whitelist()):
             if whitelist_entry['name'] == player_minecraft_name:
@@ -197,7 +210,7 @@ def api_stats(player_minecraft_name):
             uuid = api_player_info(player_minecraft_name)['minecraftUUID']
         if '-' not in uuid:
             uuid = uuid[:8] + '-' + uuid[8:12] + '-' + uuid[12:16] + '-' + uuid[16:20] + '-' + uuid[20:]
-        stats_file = os.path.join(WORLD_DIR, 'stats', uuid + '.json')
+        stats_file = os.path.join(config('serverDir'), config('worldName'), 'stats', uuid + '.json')
     with open(stats_file) as stats:
         return json.load(stats)
 
@@ -208,7 +221,7 @@ def api_latest_deaths():
     '''
     last_person = None
     people_ids = {}
-    with open(PEOPLE_JSON_FILENAME) as people_json:
+    with open(config('peopleFile')) as people_json:
         people_data = json.load(people_json)
         if isinstance(people_data, dict):
             people_data = people_data['people']
@@ -216,7 +229,7 @@ def api_latest_deaths():
             if 'id' in person and 'minecraft' in person:
                 people_ids[person['minecraft']] = person['id']
     deaths = {}
-    with open(os.path.join(LOGS, 'deaths.log')) as deaths_log:
+    with open(os.path.join(config('logPath'), 'deaths.log')) as deaths_log:
         for line in deaths_log:
             match = re.match('([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([^@ ]+) (.*)', line)
             if match and match.group(2) in people_ids:
@@ -235,7 +248,7 @@ def api_level():
     '''
     Returns the level.dat encoded as JSON
     '''
-    nbtfile = WORLD_DIR + "/level.dat"
+    nbtfile = os.path.join(config('serverDir'), config('worldName'), 'level.dat')
     return nbtfile_to_dict(nbtfile)
 
 @app.route('/server/maps/by-id/:identifier')
@@ -243,7 +256,7 @@ def api_map_by_id(identifier):
     '''
     Returns info about the map item with damage value :identifier, see http://minecraft.gamepedia.com/Map_Item_Format for documentation
     '''
-    nbt_file = os.path.join(WORLD_DIR, 'data', 'map_' + str(identifier) + '.dat')
+    nbt_file = os.path.join(config('serverDir'), config('worldName'), 'data', 'map_' + str(identifier) + '.dat')
 
     return nbtfile_to_dict(nbt_file)
 
@@ -286,7 +299,7 @@ def api_playerstats():
     '''
     data = {}
     people = None
-    directory = os.path.join(WORLD_DIR, 'stats')
+    directory = os.path.join(config('serverDir'), config('worldName'), 'stats')
     for root, dirs, files in os.walk(directory):
         for file_name in files:
             if file_name.endswith(".json"):
@@ -296,7 +309,7 @@ def api_playerstats():
                     if uuid_filename:
                         uuid = ''.join(uuid_filename.groups())
                         if people is None:
-                            with open(PEOPLE_JSON_FILENAME) as people_json:
+                            with open(config('peopleFile')) as people_json:
                                 people = json.load(people_json)
                                 if isinstance(data, dict):
                                     people = people['people']
@@ -404,7 +417,7 @@ def api_scoreboard():
     '''
     Returns the scoreboard data encoded as JSON
     '''
-    nbtfile = WORLD_DIR + "/data/scoreboard.dat"
+    nbtfile = os.path.join(config('serverDir'), config('worldName'), 'data', 'scoreboard.dat')
     return nbtfile_to_dict(nbtfile)
 
 @app.route('/server/sessions/overview.json')
@@ -419,7 +432,7 @@ def api_sessions():
         'leave': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([a-z0-9]+|\\?) left ([A-Za-z0-9_]{1,16})',
         'restart': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) @restart'
     }
-    with open(os.path.join(LOGS, 'logins.log')) as logins_log:
+    with open(os.path.join(config('logPath'), 'logins.log')) as logins_log:
         for log_line in logins_log:
             for match_type, match_string in matches.items():
                 match = re.match(match_string, log_line)
@@ -470,7 +483,7 @@ def api_sessions_last_seen():
         'restart': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) @restart'
     }
     ret = {}
-    with open(os.path.join(LOGS, 'logins.log')) as logins_log:
+    with open(os.path.join(config('logPath'), 'logins.log')) as logins_log:
         for log_line in logins_log:
             for match_type, match_string in matches.items():
                 match = re.match(match_string, log_line)
@@ -506,7 +519,7 @@ def api_whitelist():
     '''
     For UUID-based Minecraft servers (1.7.6 and later), returns the whitelist. For older servers, the behavior is undefined.
     '''
-    with open(os.path.join(SERVER_DIR, 'whitelist.json')) as whitelist:
+    with open(os.path.join(config('serverDir'), 'whitelist.json')) as whitelist:
         return whitelist.read()
 
 
