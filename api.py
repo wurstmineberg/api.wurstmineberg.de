@@ -57,14 +57,14 @@ def nbt_to_dict(nbtfile):
     collection = []
     for tag in nbtfile.tags:
         if hasattr(tag, 'tags'):
-            if tag.name is None:
+            if tag.name is None or tag.name == '':
                 collection.append(nbt_to_dict(tag))
                 is_collection = True
             else:
                 dict[tag.name] = nbt_to_dict(tag)
                 is_dict = True
         else:
-            if tag.name is None:
+            if tag.name is None or tag.name == '':
                 collection.append(tag.value)
                 is_collection = True
             else:
