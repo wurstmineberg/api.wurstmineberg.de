@@ -262,6 +262,7 @@ def api_deaths():
         for line in deaths_log:
             match = re.match('([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([^@ ]+) (.*)', line)
             if match and match.group(2) in people_ids:
+                person_id = people_ids[match.group(2)]
                 deaths[person_id].append({
                     'cause': match.group(3),
                     'timestamp': match.group(1)
