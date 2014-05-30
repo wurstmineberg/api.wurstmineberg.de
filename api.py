@@ -5,6 +5,7 @@ Wurstmineberg API server
 
 __version__ = '1.9.3'
 
+import collections
 from datetime import datetime
 import json
 import os
@@ -242,6 +243,30 @@ def api_latest_deaths():
         'deaths': deaths,
         'lastPerson': last_person
     }
+
+@app.route('/server/deaths/overview.json')
+def api_deaths():
+    '''
+    Returns JSON containing information about all recorded player deaths
+    '''
+    people_ids = {}
+    with open(config('peopleFile')) as people_json:
+        people_data = json.load(people_json)
+        if isinstance(people_data, dict):
+            people_data = people_data['people']
+        for person in people_data:
+            if 'id' in person and 'minecraft' in person:
+                people_ids[person['minecraft']] = person['id']
+    deaths = collections.defaultdict(list)
+    with open(os.path.join(config('logPath'), 'deaths.log')) as deaths_log:
+        for line in deaths_log:
+            match = re.match('([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([^@ ]+) (.*)', line)
+            if match and match.group(2) in people_ids:
+                deaths[person_id].append({
+                    'cause': match.group(3),
+                    'timestamp': match.group(1)
+                })
+    return deaths
 
 @app.route('/server/level.json')
 def api_level():
