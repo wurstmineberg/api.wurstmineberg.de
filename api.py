@@ -121,7 +121,7 @@ def api_death_games_log():
 @app.route('/minecraft/items/all.json')
 def api_all_items():
     '''
-    Returns the item info JSON file, see https://github.com/wurstmineberg/wurstmineberg-web/blob/master/static/json/items.json.description.txt for documentation
+    Returns the item info JSON file, see http://assets.wurstmineberg.de/json/items.json.description.txt for documentation
     '''
     with open(os.path.join(config('webAssets'), 'items.json')) as items_file:
         return json.load(items_file)
@@ -168,7 +168,7 @@ def api_item_by_id(item_id):
 @app.route('/player/:player_id/info.json')
 def api_player_info(player_id):
     '''
-    Returns the section of people.json that corresponds to the player
+    Returns the section of people.json that corresponds to the player. See http://wiki.wurstmineberg.de/People_file for more info.
     '''
     person_data = None
     with open(config('peopleFile')) as people_json:
