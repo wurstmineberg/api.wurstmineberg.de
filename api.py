@@ -165,6 +165,14 @@ def api_item_by_id(item_id):
     '''
     return api_item_by_damage(item_id, None)
 
+@app.route('/minigame/achievements/winners.json')
+def api_achievement_winners():
+    '''
+    Returns a list of Wurstmineberg IDs of all players who have completed all achievements, ordered chronologically by the time they got their last achievement. This list is emptied each time a new achievement is added to Minecraft.
+    '''
+    with open(os.path.join(config('logPath'), 'achievements.log')) as achievements_log:
+        return json.dumps(list(line.strip() for line in achievements_log))
+
 @app.route('/player/:player_id/info.json')
 def api_player_info(player_id):
     '''
