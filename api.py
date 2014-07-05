@@ -456,7 +456,9 @@ def api_sessions():
     matches = {
         'join': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([a-z0-9]+|\\?) joined ([A-Za-z0-9_]{1,16})',
         'leave': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([a-z0-9]+|\\?) left ([A-Za-z0-9_]{1,16})',
-        'restart': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) @restart'
+        'restart': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) @restart',
+        'start': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) @start ([^ ]+)',
+        'stop': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) @stop'
     }
     with open(os.path.join(config('logPath'), 'logins.log')) as logins_log:
         for log_line in logins_log:
@@ -475,6 +477,26 @@ def api_sessions():
                             session['leaveReason'] = 'restart'
                     uptimes.append(current_uptime)
                 current_uptime = {'startTime': match.group(1)}
+            elif match_type == 'start':
+                if current_uptime is not None:
+                    current_uptime['endTime'] = match.group(1)
+                    for session in current_uptime.get('sessions', []):
+                        if 'leaveTime' not in session:
+                            session['leaveTime'] = match.group(1)
+                            session['leaveReason'] = 'serverStartOverride'
+                    uptimes.append(current_uptime)
+                current_uptime = {
+                    'startTime': match.group(1),
+                    'version': match.group(2)
+                }
+            elif match_type == 'stop':
+                if current_uptime is not None:
+                    current_uptime['endTime'] = match.group(1)
+                    for session in current_uptime.get('sessions', []):
+                        if 'leaveTime' not in session:
+                            session['leaveTime'] = match.group(1)
+                            session['leaveReason'] = 'serverStop'
+                    uptimes.append(current_uptime)
             elif current_uptime is None or match.group(2) == '?':
                 continue
             elif match_type == 'join':
@@ -506,7 +528,9 @@ def api_sessions_last_seen():
     matches = {
         'join': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([a-z0-9]+|\\?) joined ([A-Za-z0-9_]{1,16})',
         'leave': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([a-z0-9]+|\\?) left ([A-Za-z0-9_]{1,16})',
-        'restart': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) @restart'
+        'restart': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) @restart',
+        'start': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) @start ([^ ]+)',
+        'stop': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) @stop'
     }
     ret = {}
     with open(os.path.join(config('logPath'), 'logins.log')) as logins_log:
@@ -522,6 +546,16 @@ def api_sessions_last_seen():
                     if 'leaveTime' not in session:
                         session['leaveTime'] = match.group(1)
                         session['leaveReason'] = 'restart'
+            elif match_type == 'start':
+                for session in ret.values():
+                    if 'leaveTime' not in session:
+                        session['leaveTime'] = match.group(1)
+                        sesson['leaveReason'] = 'serverStartOverride'
+            elif match_type == 'stop':
+                for session in ret.values():
+                    if 'leaveTime' not in session:
+                        session['leaveTime'] = match.group(1)
+                        session['leaveReason'] = 'serverStop'
             elif match_type == 'join':
                 if match.group(2) == '?':
                     continue
