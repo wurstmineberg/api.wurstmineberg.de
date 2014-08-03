@@ -28,6 +28,7 @@ app = application = Bottle()
 
 def config(key=None):
     default_config = {
+        'jlogPath': '/opt/wurstmineberg/jlog',
         'logPath': '/opt/wurstmineberg/log',
         'peopleFile': '/opt/wurstmineberg/config/people.json',
         'serverDir': '/opt/wurstmineberg/server',
@@ -172,6 +173,17 @@ def api_achievement_winners():
     '''
     with open(os.path.join(config('logPath'), 'achievements.log')) as achievements_log:
         return json.dumps(list(line.strip() for line in achievements_log))
+
+@app.route('/minigame/diary/all.json')
+def api_diary():
+    '''
+    Returns all diary entries, sorted chronologically.
+    '''
+    ret = []
+    with open(os.path.join(config('jlogPath'), 'diary.jlog')) as diary_jlog:
+        for line in diary_jlog:
+            ret.append(json.loads(line))
+    return json.dumps(ret, sort_keys=True, indent=4)
 
 @app.route('/player/:player_id/info.json')
 def api_player_info(player_id):
