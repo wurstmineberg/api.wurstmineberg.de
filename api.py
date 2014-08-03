@@ -3,7 +3,7 @@
 Wurstmineberg API server
 '''
 
-__version__ = '1.11.0'
+__version__ = '1.12.0'
 
 import collections
 from datetime import datetime
