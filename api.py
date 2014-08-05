@@ -570,7 +570,7 @@ def api_sessions_last_seen():
                 for session in ret.values():
                     if 'leaveTime' not in session:
                         session['leaveTime'] = match.group(1)
-                        sesson['leaveReason'] = 'serverStartOverride'
+                        session['leaveReason'] = 'serverStartOverride'
             elif match_type == 'stop':
                 for session in ret.values():
                     if 'leaveTime' not in session:
