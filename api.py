@@ -1,10 +1,12 @@
-#!/usr/bin/python
-'''
+#!/usr/bin/env python3
+"""
 Wurstmineberg API server
-'''
+"""
 
+import bottle
 import collections
 from datetime import datetime
+import io
 import json
 import os
 import os.path
@@ -12,7 +14,6 @@ import re
 import subprocess
 import time
 
-from bottle import *
 from nbt import *
 
 def parse_version_string():
@@ -47,7 +48,7 @@ Welcome to the Wurstmineberg API. Feel free to play around!<br>
 Currently available API endpoints:
 """
 
-app = application = Bottle()
+app = bottle.Bottle()
 
 def config(key=None):
     default_config = {
@@ -107,9 +108,7 @@ def nbt_to_dict(nbtfile):
         return collection
 
 def playernames():
-    '''
-    Returns all player names it can find
-    '''
+    """Returns all player names it can find"""
     try:
         data = [entry['name'] for entry in json.loads(api_whitelist())]
     except:
@@ -124,9 +123,7 @@ def playernames():
 
 @app.route('/')
 def show_index():
-    '''
-    The documentation page
-    '''
+    """The documentation page"""
     documentation = '<p>' + DOCUMENTATION_INTRO + '</p>'
     documentation += '<table id="api-endpoints"><tbody>\n'
     documentation += '<tr><th style="text-align: left">Endpoint</th><th style="text-align: left">Description</th>\n'
@@ -138,25 +135,19 @@ def show_index():
 
 @app.route('/deathgames/log.json')
 def api_death_games_log():
-    '''
-    Returns the Death Games log, listing attempts in chronological order. See http://wiki.wurstmineberg.de/Death_Games for more info.
-    '''
+    """Returns the Death Games log, listing attempts in chronological order. See http://wiki.wurstmineberg.de/Death_Games for more info."""
     with open(os.path.join(config('logPath'), 'deathgames.json')) as death_games_logfile:
         return json.load(death_games_logfile)
 
 @app.route('/minecraft/items/all.json')
 def api_all_items():
-    '''
-    Returns the item info JSON file, see http://assets.wurstmineberg.de/json/items.json.description.txt for documentation
-    '''
+    """Returns the item info JSON file, see http://assets.wurstmineberg.de/json/items.json.description.txt for documentation"""
     with open(os.path.join(config('webAssets'), 'items.json')) as items_file:
         return json.load(items_file)
 
 @app.route('/minecraft/items/by-damage/:item_id/:item_damage')
 def api_item_by_damage(item_id, item_damage):
-    '''
-    Returns the item info for an item with the given numeric or text ID and numeric damage value. Note that text IDs may be ambiguous and will return an arbitrary matching item.
-    '''
+    """Returns the item info for an item with the given numeric or text ID and numeric damage value. Note that text IDs may be ambiguous and will return an arbitrary matching item."""
     all_items = api_all_items()
     try:
         item_id = int(item_id)
@@ -186,24 +177,18 @@ def api_item_by_damage(item_id, item_damage):
 
 @app.route('/minecraft/items/by-id/:item_id')
 def api_item_by_id(item_id):
-    '''
-    Returns the item info for an item with the given numeric or text ID and the default damage value. Note that text IDs may be ambiguous and will return an arbitrary matching item.
-    '''
+    """Returns the item info for an item with the given numeric or text ID and the default damage value. Note that text IDs may be ambiguous and will return an arbitrary matching item."""
     return api_item_by_damage(item_id, None)
 
 @app.route('/minigame/achievements/winners.json')
 def api_achievement_winners():
-    '''
-    Returns a list of Wurstmineberg IDs of all players who have completed all achievements, ordered chronologically by the time they got their last achievement. This list is emptied each time a new achievement is added to Minecraft.
-    '''
+    """Returns a list of Wurstmineberg IDs of all players who have completed all achievements, ordered chronologically by the time they got their last achievement. This list is emptied each time a new achievement is added to Minecraft."""
     with open(os.path.join(config('logPath'), 'achievements.log')) as achievements_log:
         return json.dumps(list(line.strip() for line in achievements_log))
 
 @app.route('/minigame/diary/all.json')
 def api_diary():
-    '''
-    Returns all diary entries, sorted chronologically.
-    '''
+    """Returns all diary entries, sorted chronologically."""
     ret = []
     with open(os.path.join(config('jlogPath'), 'diary.jlog')) as diary_jlog:
         for line in diary_jlog:
@@ -212,9 +197,7 @@ def api_diary():
 
 @app.route('/player/:player_id/info.json')
 def api_player_info(player_id):
-    '''
-    Returns the section of people.json that corresponds to the player. See http://wiki.wurstmineberg.de/People_file for more info.
-    '''
+    """Returns the section of people.json that corresponds to the player. See http://wiki.wurstmineberg.de/People_file for more info."""
     person_data = None
     with open(config('peopleFile')) as people_json:
         data = json.load(people_json)
@@ -225,9 +208,7 @@ def api_player_info(player_id):
 
 @app.route('/player/:player_minecraft_name/playerdata.json')
 def api_player_data(player_minecraft_name):
-    '''
-    Returns the player data encoded as JSON, also accepts the player id instead of the Minecraft name
-    '''
+    """Returns the player data encoded as JSON, also accepts the player id instead of the Minecraft name"""
     nbtfile = os.path.join(config('serverDir'), config('worldName'), 'players', player_minecraft_name + '.dat')
     if not os.path.exists(nbtfile):
         for whitelist_entry in json.loads(api_whitelist()):
@@ -243,9 +224,7 @@ def api_player_data(player_minecraft_name):
 
 @app.route('/player/:player_minecraft_name/stats.json')
 def api_stats(player_minecraft_name):
-    '''
-    Returns the stats JSON file from the server, also accepts the player id instead of the Minecraft name
-    '''
+    """Returns the stats JSON file from the server, also accepts the player id instead of the Minecraft name"""
     stats_file = os.path.join(config('serverDir'), config('worldName'), 'stats', player_minecraft_name + '.json')
     if not os.path.exists(stats_file):
         for whitelist_entry in json.loads(api_whitelist()):
@@ -262,9 +241,7 @@ def api_stats(player_minecraft_name):
 
 @app.route('/server/deaths/latest.json')
 def api_latest_deaths():
-    '''
-    Returns JSON containing information about the most recent death of each player
-    '''
+    """Returns JSON containing information about the most recent death of each player"""
     last_person = None
     people_ids = {}
     with open(config('peopleFile')) as people_json:
@@ -291,9 +268,7 @@ def api_latest_deaths():
 
 @app.route('/server/deaths/overview.json')
 def api_deaths():
-    '''
-    Returns JSON containing information about all recorded player deaths
-    '''
+    """Returns JSON containing information about all recorded player deaths"""
     people_ids = {}
     with open(config('peopleFile')) as people_json:
         people_data = json.load(people_json)
@@ -316,25 +291,83 @@ def api_deaths():
 
 @app.route('/server/level.json')
 def api_level():
-    '''
-    Returns the level.dat encoded as JSON
-    '''
+    """Returns the level.dat encoded as JSON"""
     nbtfile = os.path.join(config('serverDir'), config('worldName'), 'level.dat')
     return nbtfile_to_dict(nbtfile)
 
 @app.route('/server/maps/by-id/:identifier')
 def api_map_by_id(identifier):
-    '''
-    Returns info about the map item with damage value :identifier, see http://minecraft.gamepedia.com/Map_Item_Format for documentation
-    '''
+    """Returns info about the map item with damage value :identifier, see http://minecraft.gamepedia.com/Map_Item_Format for documentation"""
     nbt_file = os.path.join(config('serverDir'), config('worldName'), 'data', 'map_' + str(identifier) + '.dat')
     return nbtfile_to_dict(nbt_file)
 
+def map_image(map_dict):
+    """Returns a PIL.Image.Image object of the map.
+    
+    Required arguments:
+    map_dict -- A dict representing NBT data for a map, as returned by api_map_by_id
+    """
+    import PIL.Image
+    map_palette = [
+        (0, 0, 0),
+        (127, 178, 56),
+        (247, 233, 163),
+        (167, 167, 167),
+        (255, 0, 0),
+        (160, 160, 255),
+        (167, 167, 167),
+        (0, 124, 0),
+        (255, 255, 255),
+        (164, 168, 184),
+        (183, 106, 47),
+        (112, 112, 112),
+        (64, 64, 255),
+        (104, 83, 50),
+        (255, 252, 245),
+        (216, 127, 51),
+        (178, 76, 216),
+        (102, 153, 216),
+        (229, 229, 51),
+        (127, 204, 25),
+        (242, 127, 165),
+        (76, 76, 76),
+        (153, 153, 153),
+        (76, 127, 153),
+        (127, 63, 178),
+        (51, 76, 178),
+        (102, 76, 51),
+        (102, 127, 51),
+        (153, 51, 51),
+        (25, 25, 25),
+        (250, 238, 77),
+        (92, 219, 213),
+        (74, 128, 255),
+        (0, 217, 58),
+        (21, 20, 31),
+        (112, 2, 0)
+    ]
+    ret = PIL.Image.new('RGBA', (map_dict['data']['width'], map_dict['data']['height']), color=(0, 0, 0, 0))
+    for i, color in enumerate(map_dict['data']['colors']):
+        y, x = divmod(i, map_dict['data']['width'])
+        base_color, color_variant = divmod(color, 4)
+        if base_color == 0:
+            continue
+        color = tuple(round(palette_color * [180, 220, 255, 135][color_variant] / 255) for palette_color in map_palette[base_color]) + (255,)
+        ret.putpixel((x, y), color)
+    return ret
+
+@app.route('/server/maps/render/:identifier/png.png')
+def api_map_render_png(identifier):
+    """Returns the map item with damage values :identifier, rendered as a PNG image file."""
+    img_io = io.BytesIO()
+    image = map_image(api_map_by_id(identifier))
+    image.save(img_io, 'PNG')
+    img_io.seek(0)
+    return bottle.static_file(img_io, mimetype='image/jpeg')
+
 @app.route('/server/playerdata/by-id/:identifier')
 def api_player_data_by_id(identifier):
-    '''
-    Returns all the player data with the specified ID
-    '''
+    """Returns all the player data with the specified ID"""
     all_data = api_player_data_all()
     data = {}
     for player in all_data:
@@ -346,9 +379,7 @@ def api_player_data_by_id(identifier):
 
 @app.route('/server/playerdata.json')
 def api_player_data_all():
-    '''
-    Returns all the player data encoded as JSON
-    '''
+    """Returns all the player data encoded as JSON"""
     nbtdicts = {}
     for user in playernames():
         nbtdata = api_player_data(user)
@@ -357,16 +388,12 @@ def api_player_data_all():
 
 @app.route('/server/playernames.json')
 def api_playernames():
-    '''
-    Returns all player names it can find
-    '''
+    """Returns all player names it can find"""
     return json.dumps(playernames())
 
 @app.route('/server/playerstats.json')
 def api_playerstats():
-    '''
-    Returns all player stats in one file. This file can be potentially big. Please use one of the other APIs if possible.
-    '''
+    """Returns all player stats in one file. This file can be potentially big. Please use one of the other APIs if possible."""
     data = {}
     people = None
     directory = os.path.join(config('serverDir'), config('worldName'), 'stats')
@@ -392,9 +419,7 @@ def api_playerstats():
 
 @app.route('/server/playerstats/achievement.json')
 def api_playerstats_achievements():
-    '''
-    Returns all achievement stats in one file
-    '''
+    """Returns all achievement stats in one file"""
     alldata = api_playerstats()
     data = {}
     for player in alldata:
@@ -410,9 +435,7 @@ def api_playerstats_achievements():
 
 @app.route('/server/playerstats/by-id/:identifier')
 def api_playerstats_by_id(identifier):
-    '''
-    Returns the stat item :identifier from all player stats
-    '''
+    """Returns the stat item :identifier from all player stats"""
     alldata = api_playerstats()
     data = {}
     for player in alldata:
@@ -426,9 +449,7 @@ def api_playerstats_by_id(identifier):
 
 @app.route('/server/playerstats/entity.json')
 def api_playerstats_entities():
-    '''
-    Returns all entity stats in one file
-    '''
+    """Returns all entity stats in one file"""
     alldata = api_playerstats()
     data = {}
     entityActions = ['killEntity', 'entityKilledBy']
@@ -445,9 +466,7 @@ def api_playerstats_entities():
 
 @app.route('/server/playerstats/general.json')
 def api_playerstats_general():
-    '''
-    Returns all general stats in one file
-    '''
+    """Returns all general stats in one file"""
     alldata = api_playerstats()
     data = {}
     nonGeneralActions = [
@@ -465,9 +484,7 @@ def api_playerstats_general():
 
 @app.route('/server/playerstats/item.json')
 def api_playerstats_items():
-    '''
-    Returns all item and block stats in one file
-    '''
+    """Returns all item and block stats in one file"""
     alldata = api_playerstats()
     data = {}
     itemActions = ['useItem', 'craftItem', 'breakItem', 'mineBlock']
@@ -484,17 +501,13 @@ def api_playerstats_items():
 
 @app.route('/server/scoreboard.json')
 def api_scoreboard():
-    '''
-    Returns the scoreboard data encoded as JSON
-    '''
+    """Returns the scoreboard data encoded as JSON"""
     nbtfile = os.path.join(config('serverDir'), config('worldName'), 'data', 'scoreboard.dat')
     return nbtfile_to_dict(nbtfile)
 
 @app.route('/server/sessions/overview.json')
 def api_sessions():
-    '''
-    Returns known players' sessions since the first recorded server restart
-    '''
+    """Returns known players' sessions since the first recorded server restart"""
     uptimes = []
     current_uptime = None
     matches = {
@@ -566,9 +579,7 @@ def api_sessions():
 
 @app.route('/server/sessions/lastseen.json')
 def api_sessions_last_seen():
-    '''
-    Returns the last known session for each player
-    '''
+    """Returns the last known session for each player"""
     matches = {
         'join': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([a-z0-9]+|\\?) joined ([A-Za-z0-9_]{1,16})',
         'leave': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([a-z0-9]+|\\?) left ([A-Za-z0-9_]{1,16})',
@@ -620,24 +631,18 @@ def api_sessions_last_seen():
 
 @app.route('/server/whitelist.json')
 def api_whitelist():
-    '''
-    For UUID-based Minecraft servers (1.7.6 and later), returns the whitelist. For older servers, the behavior is undefined.
-    '''
+    """For UUID-based Minecraft servers (1.7.6 and later), returns the whitelist. For older servers, the behavior is undefined."""
     with open(os.path.join(config('serverDir'), 'whitelist.json')) as whitelist:
         return whitelist.read()
 
-
-class StripPathMiddleware(object):
-    '''
-    Get that slash out of the request
-    '''
-    
+class StripPathMiddleware:
+    """Get that slash out of the request"""
     def __init__(self, a):
-        self.a = a
+        self.app = a
     
     def __call__(self, e, h):
         e['PATH_INFO'] = e['PATH_INFO'].rstrip('/')
-        return self.a(e, h)
+        return self.app(e, h)
 
 if __name__ == '__main__':
-    run(app=StripPathMiddleware(app), server='python_server', host='0.0.0.0', port=8080)
+    bottle.run(app=StripPathMiddleware(app), server='python_server', host='0.0.0.0', port=8080)
