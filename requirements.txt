@@ -1,0 +1,3 @@
+Pillow>=2.5.2
+bottle>=0.11.6
+-e git://github.com/twoolie/nbt.git#egg=nbt
