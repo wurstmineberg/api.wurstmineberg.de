@@ -48,11 +48,12 @@ def nbtfile_to_dict(filename):
     nbtfile = nbt.NBTFile(filename)
     nbtdict = nbt_to_dict(nbtfile)
     if isinstance(nbtdict, dict):
-        nbtdict["api-time-last-modified"] = os.path.getmtime(filename)
-        nbtdict["api-time-result-fetched"] = time.time()
+        nbtdict['api-time-last-modified'] = os.path.getmtime(filename)
+        nbtdict['api-time-result-fetched'] = time.time()
     return nbtdict
 
 def nbt_to_dict(nbtfile):
+    """Generates a JSON-serializable value from an nbt.NBTFile object."""
     dict = {}
     is_collection = False
     is_dict = False
@@ -66,16 +67,17 @@ def nbt_to_dict(nbtfile):
                 dict[tag.name] = nbt_to_dict(tag)
                 is_dict = True
         else:
+            value = tag.value
+            if isinstance(value, bytearray):
+                value = list(value)
             if tag.name is None or tag.name == '':
-                collection.append(tag.value)
+                collection.append(value)
                 is_collection = True
             else:
-                dict[tag.name] = tag.value
+                dict[tag.name] = value
                 is_dict = True
-
     if is_collection and is_dict:
-        dict["collection"] = collection
-
+        dict['collection'] = collection
     if is_dict:
         return dict
     else:
@@ -303,7 +305,6 @@ def api_map_by_id(identifier):
     Returns info about the map item with damage value :identifier, see http://minecraft.gamepedia.com/Map_Item_Format for documentation
     '''
     nbt_file = os.path.join(config('serverDir'), config('worldName'), 'data', 'map_' + str(identifier) + '.dat')
-
     return nbtfile_to_dict(nbt_file)
 
 @app.route('/server/playerdata/by-id/:identifier')
