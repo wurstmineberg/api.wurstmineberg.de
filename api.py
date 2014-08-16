@@ -366,7 +366,7 @@ def api_map_render_png(identifier):
     image = map_image(api_map_by_id(identifier))
     image.save(img_io, 'PNG')
     img_io.seek(0)
-    return bottle.static_file(img_io, mimetype='image/jpeg')
+    return img_io
 
 @app.route('/server/playerdata/by-id/:identifier')
 def api_player_data_by_id(identifier):
