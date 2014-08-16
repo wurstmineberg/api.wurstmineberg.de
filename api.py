@@ -3,18 +3,21 @@
 Wurstmineberg API server
 """
 
+import sys
+
+sys.path.append('/opt/py')
+
 import bottle
 import collections
 from datetime import datetime
 import io
 import json
+import nbt.nbt
 import os
 import os.path
 import re
 import subprocess
 import time
-
-from nbt import *
 
 def parse_version_string():
     path = __file__
@@ -69,7 +72,7 @@ def config(key=None):
     return j.get(key, default_config.get(key))
 
 def nbtfile_to_dict(filename):
-    nbtfile = nbt.NBTFile(filename)
+    nbtfile = nbt.nbt.NBTFile(filename)
     nbtdict = nbt_to_dict(nbtfile)
     if isinstance(nbtdict, dict):
         nbtdict['api-time-last-modified'] = os.path.getmtime(filename)
@@ -77,7 +80,7 @@ def nbtfile_to_dict(filename):
     return nbtdict
 
 def nbt_to_dict(nbtfile):
-    """Generates a JSON-serializable value from an nbt.NBTFile object."""
+    """Generates a JSON-serializable value from an nbt.nbt.NBTFile object."""
     dict = {}
     is_collection = False
     is_dict = False
