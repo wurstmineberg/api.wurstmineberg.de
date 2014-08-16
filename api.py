@@ -3,17 +3,40 @@
 Wurstmineberg API server
 '''
 
-__version__ = '1.12.1'
-
 import collections
 from datetime import datetime
 import json
 import os
+import os.path
 import re
+import subprocess
 import time
 
 from bottle import *
 from nbt import *
+
+def parse_version_string():
+    path = __file__
+    while os.path.islink(path):
+        path = os.path.join(os.path.dirname(path), os.readlink(path))
+    path = os.path.dirname(path) # go up one level, from repo/api.py to repo, where README.md is located
+    while os.path.islink(path):
+        path = os.path.join(os.path.dirname(path), os.readlink(path))
+    try:
+        version = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], cwd=path).decode('utf-8').strip('\n')
+        if version == 'master':
+            try:
+                with open(os.path.join(path, 'README.md')) as readme:
+                    for line in readme.read().splitlines():
+                        if line.startswith('This is version '):
+                            return line.split(' ')[3]
+            except:
+                pass
+        return subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'], cwd=path).decode('utf-8').strip('\n')
+    except:
+        pass
+
+__version__ = str(parse_version_string())
 
 CONFIG_PATH = '/opt/wurstmineberg/config/api.json'
 
