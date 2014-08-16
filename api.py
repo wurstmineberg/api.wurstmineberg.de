@@ -51,7 +51,7 @@ Welcome to the Wurstmineberg API. Feel free to play around!<br>
 Currently available API endpoints:
 """
 
-app = bottle.Bottle()
+app = application = bottle.Bottle() # aliased as application for uwsgi to find
 
 def config(key=None):
     default_config = {
@@ -648,4 +648,4 @@ class StripPathMiddleware:
         return self.app(e, h)
 
 if __name__ == '__main__':
-    bottle.run(app=StripPathMiddleware(app), server='python_server', host='0.0.0.0', port=8080)
+    bottle.run(app=StripPathMiddleware(app), host='0.0.0.0', port=8081)
