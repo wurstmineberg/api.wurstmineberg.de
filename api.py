@@ -46,10 +46,9 @@ CONFIG_PATH = '/opt/wurstmineberg/config/api.json'
 
 DOCUMENTATION_INTRO = """
 <h1>Wurstmineberg API</h1>
-Welcome to the Wurstmineberg API. Feel free to play around!<br>
-<br>
-Currently available API endpoints:
-"""
+<p>Welcome to the Wurstmineberg Minecraft API. Feel free to play around!</p>
+<p>This is version {} of the API. Currently available API endpoints:</p>
+""".format(__version__)
 
 app = application = bottle.Bottle() # aliased as application for uwsgi to find
 
@@ -119,7 +118,7 @@ def playernames():
     directory = os.path.join(config('serverDir'), config('worldName'), 'players')
     for root, dirs, files in os.walk(directory):
         for file in files:
-            if file.endswith(".dat"):
+            if file.endswith('.dat'):
                 name = os.path.splitext(file)[0]
                 data.append(name)
     return data
@@ -127,12 +126,11 @@ def playernames():
 @app.route('/')
 def show_index():
     """The documentation page"""
-    documentation = '<p>' + DOCUMENTATION_INTRO + '</p>'
+    documentation = DOCUMENTATION_INTRO
     documentation += '<table id="api-endpoints"><tbody>\n'
     documentation += '<tr><th style="text-align: left">Endpoint</th><th style="text-align: left">Description</th>\n'
     for route in app.routes:
-        documentation += "\n<tr><td>" + route.rule + \
-            "</td><td>" + str(route.callback.__doc__) + '</td></tr>'
+        documentation += '\n<tr><td>' + route.rule + '</td><td>' + str(route.callback.__doc__) + '</td></tr>'
     documentation += '</tbody></table>'
     return documentation
 
