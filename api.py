@@ -21,7 +21,7 @@ import tempfile
 import time
 
 def parse_version_string():
-    path = __file__
+    path = os.path.abspath(__file__)
     while os.path.islink(path):
         path = os.path.join(os.path.dirname(path), os.readlink(path))
     path = os.path.dirname(path) # go up one level, from repo/api.py to repo, where README.md is located
