@@ -367,7 +367,7 @@ def api_map_render_png(identifier):
         map_path = os.path.join(map_dir, map_name)
         if os.path.exists(map_path) and os.path.getmtime(map_path) > os.path.getmtime(os.path.join(config('serverDir'), config('worldName'), 'data', 'map_' + str(identifier) + '.dat')) + 60:
             # map has been rendered over a minute after it was saved, use the cached map file
-            return bottle.static_file(map_dir, map_name, mimetype='image/png')
+            return bottle.static_file(map_name, map_dir, mimetype='image/png')
         else:
             map_file = open(map_path, 'wb')
     else:
@@ -377,7 +377,7 @@ def api_map_render_png(identifier):
     image = map_image(api_map_by_id(identifier))
     image.save(map_file, 'PNG')
     map_file.close()
-    return bottle.static_file(map_dir, map_name, mimetype='image/png')
+    return bottle.static_file(map_name, map_dir, mimetype='image/png')
 
 @app.route('/server/playerdata/by-id/:identifier')
 def api_player_data_by_id(identifier):
