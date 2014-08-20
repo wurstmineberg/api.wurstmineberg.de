@@ -17,6 +17,7 @@ import os
 import os.path
 import re
 import subprocess
+import tempfile
 import time
 
 def parse_version_string():
@@ -360,11 +361,23 @@ def map_image(map_dict):
 @app.route('/server/maps/render/:identifier/png.png')
 def api_map_render_png(identifier):
     """Returns the map item with damage values :identifier, rendered as a PNG image file."""
-    img_io = io.BytesIO()
+    if config('cache'):
+        map_dir = os.path.join(config('cache'), 'map-renders')
+        map_name = str(identifier) + '.png'
+        map_path = os.path.join(map_dir, map_name)
+        if os.path.exists(map_path) and os.path.getmtime(map_path) > os.path.getmtime(os.path.join(config('serverDir'), config('worldName'), 'data', 'map_' + str(identifier) + '.dat')) + 60:
+            # map has been rendered over a minute after it was saved, use the cached map file
+            return bottle.static_file(map_dir, map_name, mimetype='image/png')
+        else:
+            map_file = open(map_path, 'wb')
+    else:
+        map_file = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
+        map_path = map_file.name
+        map_dir, map_name = os.path.split(map_path)
     image = map_image(api_map_by_id(identifier))
-    image.save(img_io, 'PNG')
-    img_io.seek(0)
-    return img_io
+    image.save(map_file, 'PNG')
+    map_file.close()
+    return bottle.static_file(map_dir, map_name, mimetype='image/png')
 
 @app.route('/server/playerdata/by-id/:identifier')
 def api_player_data_by_id(identifier):
