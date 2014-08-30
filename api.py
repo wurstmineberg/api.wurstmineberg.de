@@ -159,14 +159,17 @@ def api_item_by_damage(item_id, item_damage):
         id_is_numeric = False
         item_id = re.sub('\\.', ':', str(item_id))
     if id_is_numeric:
-        for item in all_items['minecraft'].values():
+        plugin = 'minecraft'
+        for string_id, item in all_items[plugin].items():
             if item.get('blockID') == item_id:
+                item_id = string_id
                 ret = item
                 if 'blockInfo' in ret:
                     ret.update(ret['blockInfo'])
                     del ret['blockInfo']
                 break
             if item.get('itemID') == item_id:
+                item_id = string_id
                 ret = item
                 if 'blockInfo' in ret:
                     del ret['blockInfo']
