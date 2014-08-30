@@ -399,7 +399,7 @@ def api_map_render_png(identifier):
 
 @app.route('/server/playerdata/by-id/:identifier')
 def api_player_data_by_id(identifier):
-    """Returns all the player data with the specified ID"""
+    """Returns a dictionary with Minecraft nicks as the keys, and their player data fields :identifier as the values"""
     all_data = api_player_data_all()
     data = {}
     for player in all_data:
@@ -411,7 +411,7 @@ def api_player_data_by_id(identifier):
 
 @app.route('/server/playerdata.json')
 def api_player_data_all():
-    """Returns all the player data encoded as JSON"""
+    """Returns the player data of all whitelisted players, encoded as JSON"""
     nbtdicts = {}
     for user in playernames():
         nbtdata = api_player_data(user)
@@ -420,7 +420,7 @@ def api_player_data_all():
 
 @app.route('/server/playernames.json')
 def api_playernames():
-    """Returns all player names it can find"""
+    """Returns the Minecraft nicknames of all players on the whitelist"""
     return json.dumps(playernames())
 
 @app.route('/server/playerstats.json')
@@ -499,36 +499,31 @@ def api_playerstats_entities():
 @app.route('/server/playerstats/general.json')
 def api_playerstats_general():
     """Returns all general stats in one file"""
-    alldata = api_playerstats()
+    all_data = api_playerstats()
     data = {}
-    nonGeneralActions = [
-        'useItem', 'craftItem', 'breakItem', 'mineBlock', 'killEntity', 'entityKilledBy']
-    for player in alldata:
-        playerdata = alldata[player]
-        playerdict = {}
-        for statstr in playerdata:
-            value = playerdata[statstr]
-            stat = statstr.split('.')
-            if stat[0] == 'stat' and stat[1] not in nonGeneralActions:
-                playerdict[statstr] = value
-        data[player] = playerdict
+    non_general_stats = 'useItem', 'craftItem', 'breakItem', 'mineBlock', 'killEntity', 'entityKilledBy'
+    for player, player_data in all_data.items():
+        player_dict = {}
+        for stat_str, value in player_data.items():
+            stat = stat_str.split('.')
+            if stat[0] == 'stat' and stat[1] not in non_general_stats:
+                player_dict[stat_str] = value
+        data[player] = player_dict
     return data
 
 @app.route('/server/playerstats/item.json')
 def api_playerstats_items():
     """Returns all item and block stats in one file"""
-    alldata = api_playerstats()
+    all_data = api_playerstats()
     data = {}
-    itemActions = ['useItem', 'craftItem', 'breakItem', 'mineBlock']
-    for player in alldata:
-        playerdata = alldata[player]
-        playerdict = {}
-        for statstr in playerdata:
-            value = playerdata[statstr]
-            stat = statstr.split('.')
-            if stat[0] == 'stat' and stat[1] in itemActions:
-                playerdict[statstr] = value
-        data[player] = playerdict
+    item_actions = 'useItem', 'craftItem', 'breakItem', 'mineBlock'
+    for player, player_data in all_data.items():
+        player_dict = {}
+        for stat_str, value in player_data.items():
+            stat = stat_str.split('.')
+            if stat[0] == 'stat' and stat[1] in item_actions:
+                player_dict[stat_str] = value
+        data[player] = player_dict
     return data
 
 @app.route('/server/scoreboard.json')
