@@ -186,6 +186,7 @@ def api_item_by_damage(item_id, item_damage):
         if str(item_damage) in ret['damageValues']:
             ret.update(ret['damageValues'][str(item_damage)])
         del ret['damageValues']
+    ret['stringID'] = plugin + ':' + item_id
     return ret
 
 @app.route('/minecraft/items/by-id/:item_id')
