@@ -150,7 +150,7 @@ def api_all_items():
 
 @app.route('/minecraft/items/by-damage/:item_id/:item_damage')
 def api_item_by_damage(item_id, item_damage):
-    """Returns the item info for an item with the given numeric or text ID and numeric damage value. Note that text IDs may be ambiguous and will return an arbitrary matching item."""
+    """Returns the item info for an item with the given numeric or text ID and numeric damage value. Text IDs may use a period instead of a colon to separate the plugin prefix, or omit the prefix entirely if it is “minecraft:”."""
     all_items = api_all_items()
     try:
         item_id = int(item_id)
@@ -158,21 +158,31 @@ def api_item_by_damage(item_id, item_damage):
     except ValueError:
         id_is_numeric = False
         item_id = re.sub('\\.', ':', str(item_id))
-        if ':' not in item_id:
-            item_id = 'minecraft:' + item_id
     if id_is_numeric:
-        if str(item_id) in all_items:
-            ret = all_items[str(item_id)]
-        else:
-            abort(404, 'No item with id ' + str(item_id))
-    else:
-        for _, item in all_items.items():
-            if 'id' in item and item['id'] == item_id:
+        for item in all_items['minecraft'].values():
+            if item.get('blockID') == item_id:
                 ret = item
+                if 'blockInfo' in ret:
+                    ret.update(ret['blockInfo'])
+                    del ret['blockInfo']
+                break
+            if item.get('itemID') == item_id:
+                ret = item
+                if 'blockInfo' in ret:
+                    del ret['blockInfo']
                 break
         else:
             abort(404, 'No item with id ' + item_id)
-    if 'damageValues' in ret:
+    else:
+        if ':' in item_id:
+            plugin, item_id = item_id.split(':')
+        else:
+            plugin = 'minecraft'
+        if plugin in all_items and item_id in all_items[plugin]:
+            ret = all_items[plugin][item_id]
+        else:
+            abort(404, 'No item with id {}:{}'.format(plugin, item_id))
+    if item_damage is not None and 'damageValues' in ret:
         if str(item_damage) in ret['damageValues']:
             ret.update(ret['damageValues'][str(item_damage)])
         del ret['damageValues']
@@ -180,7 +190,7 @@ def api_item_by_damage(item_id, item_damage):
 
 @app.route('/minecraft/items/by-id/:item_id')
 def api_item_by_id(item_id):
-    """Returns the item info for an item with the given numeric or text ID and the default damage value. Note that text IDs may be ambiguous and will return an arbitrary matching item."""
+    """Returns the item info for an item with the given numeric or text ID and the default damage value. Text IDs may use a period instead of a colon to separate the plugin prefix, or omit the prefix entirely if it is “minecraft:”."""
     return api_item_by_damage(item_id, None)
 
 @app.route('/minigame/achievements/winners.json')
