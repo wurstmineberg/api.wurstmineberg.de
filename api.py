@@ -19,6 +19,7 @@ import re
 import subprocess
 import tempfile
 import time
+import uwsgi
 
 def parse_version_string():
     path = os.path.abspath(__file__)
@@ -43,7 +44,7 @@ def parse_version_string():
 
 __version__ = str(parse_version_string())
 
-CONFIG_PATH = '/opt/wurstmineberg/config/api.json'
+CONFIG_PATH = uwsgi.opt.get('config_path', '/opt/wurstmineberg/config/api.json')
 
 DOCUMENTATION_INTRO = """
 <h1>Wurstmineberg API</h1>
@@ -59,7 +60,7 @@ def config(key=None):
         'logPath': '/opt/wurstmineberg/log',
         'peopleFile': '/opt/wurstmineberg/config/people.json',
         'serverDir': '/opt/wurstmineberg/server',
-        'webAssets': '/opt/hub/wurstmineberg/assets.wurstmineberg.de/json',
+        'webAssets': '/opt/hub/wurstmineberg/assets.wurstmineberg.de',
         'worldName': 'wurstmineberg'
     }
     try:
@@ -144,7 +145,7 @@ def api_death_games_log():
 @app.route('/minecraft/items/all.json')
 def api_all_items():
     """Returns the item info JSON file, see http://assets.wurstmineberg.de/json/items.json.description.txt for documentation"""
-    with open(os.path.join(config('webAssets'), 'items.json')) as items_file:
+    with open(os.path.join(config('webAssets'), 'json', 'items.json')) as items_file:
         return json.load(items_file)
 
 @app.route('/minecraft/items/by-damage/:item_id/:item_damage')
@@ -310,6 +311,7 @@ def map_image(map_dict):
     map_dict -- A dict representing NBT data for a map, as returned by api_map_by_id
     """
     import PIL.Image
+    
     map_palette = [
         (0, 0, 0),
         (127, 178, 56),
@@ -360,8 +362,8 @@ def map_image(map_dict):
 
 @app.route('/server/maps/render/:identifier/png.png')
 def api_map_render_png(identifier):
-    """Returns the map item with damage values :identifier, rendered as a PNG image file."""
-    if config('cache'):
+    """Returns the map item with damage value :identifier, rendered as a PNG image file."""
+    if config('cache') and os.path.exists(config('cache')):
         map_dir = os.path.join(config('cache'), 'map-renders')
         map_name = str(identifier) + '.png'
         map_path = os.path.join(map_dir, map_name)
@@ -369,6 +371,8 @@ def api_map_render_png(identifier):
             # map has been rendered over a minute after it was saved, use the cached map file
             return bottle.static_file(map_name, map_dir, mimetype='image/png')
         else:
+            if not os.path.exists(os.path.join(config('cache'), 'map-renders')):
+                os.mkdir(os.path.join(config('cache'), 'map-renders'))
             map_file = open(map_path, 'wb')
     else:
         map_file = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
