@@ -19,7 +19,6 @@ import re
 import subprocess
 import tempfile
 import time
-import uwsgi
 
 def parse_version_string():
     path = os.path.abspath(__file__)
@@ -44,7 +43,11 @@ def parse_version_string():
 
 __version__ = str(parse_version_string())
 
-CONFIG_PATH = uwsgi.opt.get('config_path', '/opt/wurstmineberg/config/api.json')
+try:
+    import uwsgi
+    CONFIG_PATH = uwsgi.opt['config_path']
+except:
+    '/opt/wurstmineberg/config/api.json'
 
 DOCUMENTATION_INTRO = """
 <h1>Wurstmineberg API</h1>
