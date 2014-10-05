@@ -695,7 +695,8 @@ def api_short_server_status():
             elif match_type == 'join':
                 online_players.add(match.group(2))
             elif match_type == 'leave':
-                online_players.remove(match.group(2))
+                if match.group(2) in online_players:
+                    online_players.remove(match.group(2))
     
     return {
         'list': sorted(list(online_players)),
