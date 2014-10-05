@@ -690,7 +690,7 @@ def api_short_server_status():
             elif match_type == 'stop':
                 online_players = set()
                 version = None
-            elif current_uptime is None or match.group(2) == '?':
+            elif match.group(2) == '?':
                 continue
             elif match_type == 'join':
                 online_players.add(match.group(2))
