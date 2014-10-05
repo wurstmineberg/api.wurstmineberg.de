@@ -659,6 +659,50 @@ def api_sessions_last_seen():
             session['leaveReason'] = 'currentlyOnline'
     return ret
 
+@app.route('/server/status.json')
+def api_short_server_status():
+    """Returns JSON containing whether the server is online, the current Minecraft version, and the list of people who are online. Requires init-minecraft."""
+    import minecraft
+    
+    matches = {
+        'join': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([a-z0-9]+|\\?) joined ([A-Za-z0-9_]{1,16})',
+        'leave': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([a-z0-9]+|\\?) left ([A-Za-z0-9_]{1,16})',
+        'restart': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) @restart',
+        'start': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) @start ([^ ]+)',
+        'stop': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) @stop'
+    }
+    online_players = set()
+    version = None
+    with open(os.path.join(config('logPath'), 'logins.log')) as logins_log:
+        for log_line in logins_log:
+            for match_type, match_string in matches.items():
+                match = re.match(match_string, log_line.strip('\n'))
+                if match:
+                    break
+            else:
+                continue
+            if match_type == 'restart':
+                online_players = set()
+                version = None
+            elif match_type == 'start':
+                online_players = set()
+                version = match.group(2)
+            elif match_type == 'stop':
+                online_players = set()
+                version = None
+            elif current_uptime is None or match.group(2) == '?':
+                continue
+            elif match_type == 'join':
+                online_players.add(match.group(2))
+            elif match_type == 'leave':
+                online_players.remove(match.group(2))
+    
+    return {
+        'list': sorted(list(online_players)),
+        'on': minecraft.status(),
+        'version': version
+    }
+
 @app.route('/server/whitelist.json')
 def api_whitelist():
     """For UUID-based Minecraft servers (1.7.6 and later), returns the whitelist. For older servers, the behavior is undefined."""
