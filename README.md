@@ -4,6 +4,15 @@ It can be found live on http://api.wurstmineberg.de/.
 
 This is version 1.14.0 of the API ([semver](http://semver.org/)). A list of available endpoints along with brief documentation can be found on its index page.
 
+Requirements
+============
+
+*   [Python](http://python.org/) 3.2
+*   [Pillow](http://pypi.python.org/pypi/Pillow) 2.5 (required for image-producing endpoints only)
+*   [bottle](http://bottlepy.org/) 0.12
+*   [init-minecraft](https://github.com/wurstmineberg/init-minecraft) 2.19 (required for `/server/status.json` only)
+*   [nbt](https://pypi.python.org/pypi/NBT) 1.4
+
 Configuration
 =============
 
