@@ -200,6 +200,39 @@ def api_item_by_id(item_id):
     """Returns the item info for an item with the given numeric or text ID and the default damage value. Text IDs may use a period instead of a colon to separate the plugin prefix, or omit the prefix entirely if it is “minecraft:”."""
     return api_item_by_damage(item_id, None)
 
+@app.route('/minecraft/items/render/dyed-by-id/:item_id/:color/png.png')
+def api_item_render_dyed_png(item_id, color):
+    """Returns a dyed item's base texture (color specified in hex rrggbb), rendered as a PNG image file."""
+    import PIL.Image
+    import PIL.ImageChops
+    
+    item = api_item_by_id(re.sub('\\.', ':', item_id))
+    if isinstance(color, int):
+        color_string = format(color, 'x')
+    else:
+        color_string = color
+    color = int(color_string[:2], 16), int(color_string[2:4], 16), int(color_string[4:6], 16)
+    if config('cache') and os.path.exists(config('cache')):
+        image_dir = os.path.join(config('cache'), 'dyed-items', *item['stringID'].split(':'))
+        image_name = color_string + '.png'
+        image_path = os.path.join(image_dir, image_name)
+        if os.path.exists(image_path): #TODO check if base texture has changed
+            # dyed item has already been rendered, use the cached image
+            return bottle.static_file(image_name, image_dir, mimetype='image/png')
+        else:
+            if not os.path.exists(os.path.join(config('cache'), 'dyed-items', *item['stringID'].split(':'))):
+                os.makedirs(os.path.join(config('cache'), 'dyed-items', *item['stringID'].split(':')))
+            image_file = open(image_path, 'wb')
+    else:
+        image_file = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
+        image_path = image_file.name
+        image_dir, image_name = os.path.split(image_path)
+    image = PIL.Image.open(os.path.join(config('webAssets'), 'img', 'grid-base', item['image']))
+    image = PIL.ImageChops.multiply(image, PIL.Image.new('RGBA', image.size, color=color + (255,)))
+    image.save(image_file, 'PNG')
+    image_file.close()
+    return bottle.static_file(map_name, map_dir, mimetype='image/png')
+
 @app.route('/minigame/achievements/winners.json')
 def api_achievement_winners():
     """Returns a list of Wurstmineberg IDs of all players who have completed all achievements, ordered chronologically by the time they got their last achievement. This list is emptied each time a new achievement is added to Minecraft."""
