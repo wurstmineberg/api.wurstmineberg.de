@@ -231,7 +231,7 @@ def api_item_render_dyed_png(item_id, color):
     image = PIL.ImageChops.multiply(image, PIL.Image.new('RGBA', image.size, color=color + (255,)))
     image.save(image_file, 'PNG')
     image_file.close()
-    return bottle.static_file(map_name, map_dir, mimetype='image/png')
+    return bottle.static_file(image_name, image_dir, mimetype='image/png')
 
 @app.route('/minigame/achievements/winners.json')
 def api_achievement_winners():
