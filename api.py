@@ -47,7 +47,7 @@ try:
     import uwsgi
     CONFIG_PATH = uwsgi.opt['config_path']
 except:
-    '/opt/wurstmineberg/config/api.json'
+    CONFIG_PATH = '/opt/wurstmineberg/config/api.json'
 
 DOCUMENTATION_INTRO = """
 <h1>Wurstmineberg API</h1>
@@ -63,7 +63,7 @@ def config(key=None):
         'logPath': '/opt/wurstmineberg/log',
         'peopleFile': '/opt/wurstmineberg/config/people.json',
         'serverDir': '/opt/wurstmineberg/server',
-        'webAssets': '/opt/hub/wurstmineberg/assets.wurstmineberg.de',
+        'webAssets': '/opt/git/github.com/wurstmineberg/assets.wurstmineberg.de/master',
         'worldName': 'wurstmineberg'
     }
     try:
