@@ -178,7 +178,7 @@ def api_item_by_damage(item_id, item_damage):
                     del ret['blockInfo']
                 break
         else:
-            abort(404, 'No item with id ' + item_id)
+            bottle.abort(404, 'No item with id ' + item_id)
     else:
         if ':' in item_id:
             plugin, item_id = item_id.split(':')
@@ -187,7 +187,7 @@ def api_item_by_damage(item_id, item_damage):
         if plugin in all_items and item_id in all_items[plugin]:
             ret = all_items[plugin][item_id]
         else:
-            abort(404, 'No item with id {}:{}'.format(plugin, item_id))
+            bottle.abort(404, 'No item with id {}:{}'.format(plugin, item_id))
     if item_damage is not None and 'damageValues' in ret:
         if str(item_damage) in ret['damageValues']:
             ret.update(ret['damageValues'][str(item_damage)])
@@ -479,7 +479,7 @@ def api_playerstats_by_id(identifier):
         if identifier in playerdata:
             data[player] = playerdata[identifier]
     if len(data) == 0:
-        abort(404, "Identifier not found")
+        bottle.abort(404, 'Identifier not found')
     return data
 
 @app.route('/server/playerstats/entity.json')
