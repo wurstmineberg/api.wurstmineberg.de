@@ -662,8 +662,6 @@ def api_sessions_last_seen():
 @app.route('/server/status.json')
 def api_short_server_status():
     """Returns JSON containing whether the server is online, the current Minecraft version, and the list of people who are online. Requires init-minecraft."""
-    import minecraft
-    
     matches = {
         'join': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([a-z0-9]+|\\?) joined ([A-Za-z0-9_]{1,16})',
         'leave': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([a-z0-9]+|\\?) left ([A-Za-z0-9_]{1,16})',
@@ -672,6 +670,7 @@ def api_short_server_status():
         'stop': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) @stop'
     }
     online_players = set()
+    status = False
     version = None
     with open(os.path.join(config('logPath'), 'logins.log')) as logins_log:
         for log_line in logins_log:
@@ -683,12 +682,15 @@ def api_short_server_status():
                 continue
             if match_type == 'restart':
                 online_players = set()
+                status = True
                 version = None
             elif match_type == 'start':
                 online_players = set()
+                status = True
                 version = match.group(2)
             elif match_type == 'stop':
                 online_players = set()
+                status = False
                 version = None
             elif match.group(2) == '?':
                 continue
@@ -700,7 +702,7 @@ def api_short_server_status():
     
     return {
         'list': sorted(list(online_players)),
-        'on': minecraft.status(),
+        'on': status,
         'version': version
     }
 

@@ -10,7 +10,6 @@ Requirements
 *   [Python](http://python.org/) 3.2
 *   [Pillow](http://pypi.python.org/pypi/Pillow) 2.5 (required for image-producing endpoints only)
 *   [bottle](http://bottlepy.org/) 0.12
-*   [init-minecraft](https://github.com/wurstmineberg/init-minecraft) 2.19 (required for `/server/status.json` only)
 *   [nbt](https://pypi.python.org/pypi/NBT) 1.4
 
 Configuration
