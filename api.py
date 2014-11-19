@@ -745,6 +745,24 @@ def api_whitelist():
     with open(os.path.join(config('serverDir'), 'whitelist.json')) as whitelist:
         return whitelist.read()
 
+@app.route('/server/world/villages/end.json')
+def api_villages():
+    """Returns the villages.dat of the main world's End, encoded as JSON"""
+    nbtfile = os.path.join(config('serverDir'), config('worldName'), 'data/villages_end.dat')
+    return nbtfile_to_dict(nbtfile)
+
+@app.route('/server/world/villages/nether.json')
+def api_villages():
+    """Returns the villages.dat of the main world's Nether, encoded as JSON"""
+    nbtfile = os.path.join(config('serverDir'), config('worldName'), 'data/villages_nether.dat')
+    return nbtfile_to_dict(nbtfile)
+
+@app.route('/server/world/villages/overworld.json')
+def api_villages():
+    """Returns the villages.dat of the main world's Overworld, encoded as JSON"""
+    nbtfile = os.path.join(config('serverDir'), config('worldName'), 'data/villages.dat')
+    return nbtfile_to_dict(nbtfile)
+
 class StripPathMiddleware:
     """Get that slash out of the request"""
     def __init__(self, a):
