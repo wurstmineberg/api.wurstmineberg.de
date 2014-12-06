@@ -359,7 +359,7 @@ def api_map_by_id(identifier):
 def api_maps_index():
     """Returns a list of existing maps with all of their fields except for the actual colors."""
     ret = {}
-    for filename in os.listdir(os.path.join(config('serverDir'), config('worldName'), 'data'):
+    for filename in os.listdir(os.path.join(config('serverDir'), config('worldName'), 'data')):
         match = re.match('map_([0-9]+).dat', filename)
         if not match:
             continue
