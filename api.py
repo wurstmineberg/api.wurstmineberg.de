@@ -367,7 +367,7 @@ def api_maps_index():
         nbt_file = os.path.join(config('serverDir'), config('worldName'), 'data', filename)
         nbt_dict = nbtfile_to_dict(nbt_file)['data']
         del nbt_dict['colors']
-        maps[str(map_id)] = nbt_dict
+        ret[str(map_id)] = nbt_dict
     return ret
 
 def map_image(map_dict):
