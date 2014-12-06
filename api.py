@@ -355,6 +355,21 @@ def api_map_by_id(identifier):
     nbt_file = os.path.join(config('serverDir'), config('worldName'), 'data', 'map_' + str(identifier) + '.dat')
     return nbtfile_to_dict(nbt_file)
 
+@app.route('/server/maps/overview.json')
+def api_maps_index():
+    """Returns a list of existing maps with all of their fields except for the actual colors."""
+    ret = {}
+    for filename in os.listdir(os.path.join(config('serverDir'), config('worldName'), 'data'):
+        match = re.match('map_([0-9]+).dat', filename)
+        if not match:
+            continue
+        map_id = int(match.group(1))
+        nbt_file = os.path.join(config('serverDir'), config('worldName'), 'data', filename)
+        nbt_dict = nbtfile_to_dict(nbt_file)['data']
+        del nbt_dict['colors']
+        maps[str(map_id)] = nbt_dict
+    return ret
+
 def map_image(map_dict):
     """Returns a PIL.Image.Image object of the map.
     
