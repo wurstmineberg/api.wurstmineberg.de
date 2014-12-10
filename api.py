@@ -279,6 +279,10 @@ def api_player_data(player_minecraft_name):
 @app.route('/player/:player_minecraft_name/stats.json')
 def api_stats(player_minecraft_name):
     """Returns the stats JSON file from the server, also accepts the player id instead of the Minecraft name"""
+    try:
+        player_minecraft_name = api_player_info(player_minecraft_name)['minecraft']
+    except:
+        pass # no such person or already correct
     stats_file = os.path.join(config('serverDir'), config('worldName'), 'stats', player_minecraft_name + '.json')
     if not os.path.exists(stats_file):
         for whitelist_entry in json.loads(api_whitelist()):
