@@ -811,14 +811,5 @@ def api_moneys():
     with open(config('moneysFile')) as moneys_json:
         return json.load(moneys_json)
 
-class StripPathMiddleware:
-    """Get that slash out of the request"""
-    def __init__(self, a):
-        self.app = a
-    
-    def __call__(self, e, h):
-        e['PATH_INFO'] = e['PATH_INFO'].rstrip('/')
-        return self.app(e, h)
-
 if __name__ == '__main__':
-    bottle.run(app=StripPathMiddleware(app), host='0.0.0.0', port=8081)
+    bottle.run(app=application, host='0.0.0.0', port=8081)
