@@ -804,14 +804,5 @@ def api_villages():
     nbtfile = os.path.join(config('serverDir'), config('worldName'), 'data/villages.dat')
     return nbtfile_to_dict(nbtfile)
 
-class StripPathMiddleware:
-    """Get that slash out of the request"""
-    def __init__(self, a):
-        self.app = a
-    
-    def __call__(self, e, h):
-        e['PATH_INFO'] = e['PATH_INFO'].rstrip('/')
-        return self.app(e, h)
-
 if __name__ == '__main__':
-    bottle.run(app=StripPathMiddleware(app), host='0.0.0.0', port=8081)
+    bottle.run(app=application, host='0.0.0.0', port=8081)
