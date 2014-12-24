@@ -63,6 +63,7 @@ def config(key=None):
         'jlogPath': '/opt/wurstmineberg/jlog',
         'logPath': '/opt/wurstmineberg/log',
         'peopleFile': '/opt/wurstmineberg/config/people.json',
+        'moneysFile': '/opt/wurstmineberg/moneys/moneys.json',
         'serverDir': '/opt/wurstmineberg/server',
         'webAssets': '/opt/git/github.com/wurstmineberg/assets.wurstmineberg.de/master',
         'worldName': 'wurstmineberg'
@@ -803,6 +804,12 @@ def api_villages():
     """Returns the villages.dat of the main world's Overworld, encoded as JSON"""
     nbtfile = os.path.join(config('serverDir'), config('worldName'), 'data/villages.dat')
     return nbtfile_to_dict(nbtfile)
+
+@app.route('/moneys/moneys.json')
+def api_moneys():
+    """Returns the moneys.json file."""
+    with open(config('moneysFile')) as moneys_json:
+        return json.load(moneys_json)
 
 class StripPathMiddleware:
     """Get that slash out of the request"""
