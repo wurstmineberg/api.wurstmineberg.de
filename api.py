@@ -260,6 +260,12 @@ def api_player_info(player_id):
         person_data = list(filter(lambda a: player_id == a['id'], data))[0]
     return person_data
 
+@app.route('/player/people.json')
+def api_player_people():
+    """Returns the whole people.json file. See http://wiki.wurstmineberg.de/People_file for more info."""
+    with open(config('peopleFile')) as people_json:
+        return json.load(people_json)
+
 @app.route('/player/:player_minecraft_name/playerdata.json')
 def api_player_data(player_minecraft_name):
     """Returns the player data encoded as JSON, also accepts the player id instead of the Minecraft name"""
