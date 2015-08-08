@@ -156,6 +156,33 @@ def api_all_items():
 @app.route('/minecraft/items/by-damage/:item_id/:item_damage')
 def api_item_by_damage(item_id, item_damage):
     """Returns the item info for an item with the given numeric or text ID and numeric damage value. Text IDs may use a period instead of a colon to separate the plugin prefix, or omit the prefix entirely if it is “minecraft:”."""
+    ret = api_item_by_id(item_id)
+    if 'damageValues' in ret: #TODO 2.0: error if the item has no damage values
+        if str(item_damage) in ret['damageValues']: #TODO 2.0: error if the damage value is not present
+            ret.update(ret['damageValues'][str(item_damage)])
+        del ret['damageValues']
+    return ret
+
+@app.route('/minecraft/items/by-effect/:item_id/:effect_id')
+def api_item_by_effect(item_id, effect_id):
+    """Returns the item info for an item with the given numeric or text ID, tagged with the given text effect ID. Text IDs may use a period instead of a colon to separate the plugin prefix, or omit the prefix entirely if it is “minecraft:”."""
+    ret = api_item_by_id(item_id)
+    if 'effects' not in ret:
+        bottle.abort(404, '{} has no effect variants'.format(ret.get('name', 'Item')))
+    effect_id = re.sub('\\.', ':', effect_id)
+    if ':' in effect_id:
+        effect_plugin, effect_id = effect_id.split(':')
+    else:
+        effect_plugin = 'minecraft'
+    if effect_plugin not in ret['effects'] or effect_id not in ret['effects'][effect_plugin]:
+        bottle.abort(404, 'Item {} has no effect variant for {}:{}'.format(ret['stringID'], effect_plugin, effect_id))
+    ret.update(ret['effects'][effect_plugin][effect_id])
+    del ret['effects']
+    return ret
+
+@app.route('/minecraft/items/by-id/:item_id')
+def api_item_by_id(item_id):
+    """Returns the item info for an item with the given numeric or text ID and the default damage value. Text IDs may use a period instead of a colon to separate the plugin prefix, or omit the prefix entirely if it is “minecraft:”."""
     all_items = api_all_items()
     try:
         item_id = int(item_id)
@@ -190,24 +217,15 @@ def api_item_by_damage(item_id, item_damage):
             ret = all_items[plugin][item_id]
         else:
             bottle.abort(404, 'No item with id {}:{}'.format(plugin, item_id))
-    if item_damage is not None and 'damageValues' in ret:
-        if str(item_damage) in ret['damageValues']:
-            ret.update(ret['damageValues'][str(item_damage)])
-        del ret['damageValues']
     ret['stringID'] = plugin + ':' + item_id
     return ret
-
-@app.route('/minecraft/items/by-id/:item_id')
-def api_item_by_id(item_id):
-    """Returns the item info for an item with the given numeric or text ID and the default damage value. Text IDs may use a period instead of a colon to separate the plugin prefix, or omit the prefix entirely if it is “minecraft:”."""
-    return api_item_by_damage(item_id, None)
 
 @app.route('/minecraft/items/render/dyed-by-id/:item_id/:color/png.png')
 def api_item_render_dyed_png(item_id, color):
     """Returns a dyed item's base texture (color specified in hex rrggbb), rendered as a PNG image file."""
     import PIL.Image
     import PIL.ImageChops
-    
+
     item = api_item_by_id(re.sub('\\.', ':', item_id))
     if isinstance(color, int):
         color_string = format(color, 'x')
@@ -398,12 +416,12 @@ def api_maps_index():
 
 def map_image(map_dict):
     """Returns a PIL.Image.Image object of the map.
-    
+
     Required arguments:
     map_dict -- A dict representing NBT data for a map, as returned by api_map_by_id
     """
     import PIL.Image
-    
+
     map_palette = [
         (0, 0, 0),
         (127, 178, 56),
@@ -774,7 +792,7 @@ def api_short_server_status():
             elif match_type == 'leave':
                 if match.group(2) in online_players:
                     online_players.remove(match.group(2))
-    
+
     return {
         'list': sorted(list(online_players)),
         'on': status,
