@@ -20,6 +20,7 @@ import re
 import subprocess
 import tempfile
 import time
+import uuid
 
 def parse_version_string():
     path = os.path.abspath(__file__)
@@ -772,15 +773,15 @@ def api_short_server_status():
     else:
         with open(config('peopleFile')) as people_json:
             people_data = json.load(people_json)
-        if isinstance(data, dict):
-            people_data = data['people']
+        if isinstance(people_data, dict):
+            people_data = people_data['people']
 
         def wmb_id(player_info):
             for person_data in people_data:
-                if uuid.UUID(person['minecraftUUID']) == uuid.UUID(player_info.id):
+                if 'minecraftUUID' in person_data and uuid.UUID(person_data['minecraftUUID']) == uuid.UUID(player_info.id):
                     return person_data['id']
             for person_data in people_data:
-                if person['minecraft'] == player_info.name:
+                if person_data['minecraft'] == player_info.name:
                     return person_data['id']
 
         return {
