@@ -785,7 +785,7 @@ def api_short_server_status():
                     return person_data['id']
 
         return {
-            'list': [wmb_id(player) for player in status.players.sample],
+            'list': [wmb_id(player) for player in (status.players.sample or [])],
             'on': True,
             'version': status.version.name
         }
