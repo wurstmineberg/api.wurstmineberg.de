@@ -10,6 +10,7 @@ sys.path.append('/opt/py')
 
 import bottle
 import collections
+import contextlib
 from datetime import datetime
 import io
 import json
@@ -512,7 +513,8 @@ def api_player_data_all():
     """Returns the player data of all whitelisted players, encoded as JSON"""
     nbtdicts = {}
     for user in playernames():
-        nbtdata = api_player_data(user)
+        with contextlib.suppress(FileNotFoundError):
+            nbtdata = api_player_data(user)
         nbtdicts[user] = nbtdata
     return nbtdicts
 
