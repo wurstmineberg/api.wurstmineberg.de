@@ -770,8 +770,21 @@ def api_short_server_status():
             'version': main_world.version()
         }
     else:
+        with open(config('peopleFile')) as people_json:
+            people_data = json.load(people_json)
+        if isinstance(data, dict):
+            people_data = data['people']
+
+        def wmb_id(player_info):
+            for person_data in people_data:
+                if uuid.UUID(person['minecraftUUID']) == uuid.UUID(player_info.id):
+                    return person_data['id']
+            for person_data in people_data:
+                if person['minecraft'] == player_info.name:
+                    return person_data['id']
+
         return {
-            'list': [player.name for player in status.players.sample],
+            'list': [wmb_id(player) for player in status.players.sample],
             'on': True,
             'version': status.version.name
         }
