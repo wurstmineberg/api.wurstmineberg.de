@@ -607,6 +607,10 @@ def api_playerstats_general():
             stat = stat_str.split('.')
             if stat[0] == 'stat' and len(stat) == 2:
                 player_dict[stat_str] = value
+            elif stat[0] == 'stat' and stat[1] == 'pickup':
+                if 'stat.pickup' not in player_dict:
+                    player_dict['stat.pickup'] = 0
+                player_dict['stat.pickup'] += value
         data[player] = player_dict
     return data
 
