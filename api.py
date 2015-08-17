@@ -601,12 +601,11 @@ def api_playerstats_general():
     """Returns all general stats in one file"""
     all_data = api_playerstats()
     data = {}
-    non_general_stats = 'useItem', 'craftItem', 'breakItem', 'mineBlock', 'killEntity', 'entityKilledBy'
     for player, player_data in all_data.items():
         player_dict = {}
         for stat_str, value in player_data.items():
             stat = stat_str.split('.')
-            if stat[0] == 'stat' and stat[1] not in non_general_stats:
+            if stat[0] == 'stat' and len(stat) == 2:
                 player_dict[stat_str] = value
         data[player] = player_dict
     return data
@@ -616,7 +615,7 @@ def api_playerstats_items():
     """Returns all item and block stats in one file"""
     all_data = api_playerstats()
     data = {}
-    item_actions = 'useItem', 'craftItem', 'breakItem', 'mineBlock'
+    item_actions = 'useItem', 'craftItem', 'breakItem', 'mineBlock', 'pickup', 'drop'
     for player, player_data in all_data.items():
         player_dict = {}
         for stat_str, value in player_data.items():
