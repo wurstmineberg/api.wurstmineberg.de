@@ -183,6 +183,19 @@ def api_item_by_effect(item_id, effect_id):
     del ret['effects']
     return ret
 
+@app.route('/minecraft/items/by-tag/:item_id/:tag_value')
+def api_item_by_tag_variant(item_id, tag_value):
+    """Returns the item info for an item with the given numeric or text ID, tagged with the given tag variant for the tag path specified in items.json. Text IDs may use a period instead of a colon to separate the plugin prefix, or omit the prefix entirely if it is “minecraft:”."""
+    ret = api_item_by_id(item_id)
+    if 'tagPath' not in ret:
+        bottle.abort(404, '{} has no tag variants'.format(ret.get('name', 'Item')))
+    if str(tag_value) not in ret['tagVariants']:
+        bottle.abort(404, 'Item {} has no tag variant for tag value {}'.format(ret['stringID'], tag_value))
+    ret.update(ret['tagVariants'][str(tag_value)])
+    del ret['tagPath']
+    del ret['tagVariants']
+    return ret
+
 @app.route('/minecraft/items/by-id/:item_id')
 def api_item_by_id(item_id):
     """Returns the item info for an item with the given numeric or text ID and the default damage value. Text IDs may use a period instead of a colon to separate the plugin prefix, or omit the prefix entirely if it is “minecraft:”."""
