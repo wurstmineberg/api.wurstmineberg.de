@@ -143,10 +143,10 @@ def api_all_items():
     with open(os.path.join(config('webAssets'), 'json', 'items.json')) as items_file:
         return json.load(items_file)
 
-@application.route('/minecraft/items/by-damage/<item_id>/<item_damage>')
-def api_item_by_damage(item_id, item_damage):
-    """Returns the item info for an item with the given numeric or text ID and numeric damage value. Text IDs may use a period instead of a colon to separate the plugin prefix, or omit the prefix entirely if it is “minecraft:”."""
-    ret = api_item_by_id(item_id)
+@application.route('/minecraft/items/by-damage/<plugin>/<item_id>/<item_damage>.json')
+def api_item_by_damage(plugin, item_id, item_damage):
+    """Returns the item info for an item with the given text ID and numeric damage value."""
+    ret = api_item_by_id(plugin, item_id)
     if 'damageValues' not in ret:
         bottle.abort(404, '{} has no damage variants'.format(ret.get('name', 'Item')))
     if str(item_damage) not in ret['damageValues']:
@@ -155,10 +155,10 @@ def api_item_by_damage(item_id, item_damage):
     del ret['damageValues']
     return ret
 
-@application.route('/minecraft/items/by-effect/<item_id>/<effect_id>')
-def api_item_by_effect(item_id, effect_id):
-    """Returns the item info for an item with the given numeric or text ID, tagged with the given text effect ID. Text IDs may use a period instead of a colon to separate the plugin prefix, or omit the prefix entirely if it is “minecraft:”."""
-    ret = api_item_by_id(item_id)
+@application.route('/minecraft/items/by-effect/<plugin>/<item_id>/<effect_id>.json')
+def api_item_by_effect(plugin, item_id, effect_id):
+    """Returns the item info for an item with the given text ID, tagged with the given text effect ID."""
+    ret = api_item_by_id(plugin, item_id)
     if 'effects' not in ret:
         bottle.abort(404, '{} has no effect variants'.format(ret.get('name', 'Item')))
     effect_id = re.sub('\\.', ':', effect_id)
@@ -172,10 +172,10 @@ def api_item_by_effect(item_id, effect_id):
     del ret['effects']
     return ret
 
-@application.route('/minecraft/items/by-tag/<item_id>/<tag_value>')
-def api_item_by_tag_variant(item_id, tag_value):
-    """Returns the item info for an item with the given numeric or text ID, tagged with the given tag variant for the tag path specified in items.json. Text IDs may use a period instead of a colon to separate the plugin prefix, or omit the prefix entirely if it is “minecraft:”."""
-    ret = api_item_by_id(item_id)
+@application.route('/minecraft/items/by-tag/<plugin>/<item_id>/<tag_value>.json')
+def api_item_by_tag_variant(plugin, item_id, tag_value):
+    """Returns the item info for an item with the given text ID, tagged with the given tag variant for the tag path specified in items.json."""
+    ret = api_item_by_id(plugin, item_id)
     if 'tagPath' not in ret:
         bottle.abort(404, '{} has no tag variants'.format(ret.get('name', 'Item')))
     if str(tag_value) not in ret['tagVariants']:
@@ -185,68 +185,39 @@ def api_item_by_tag_variant(item_id, tag_value):
     del ret['tagVariants']
     return ret
 
-@application.route('/minecraft/items/by-id/<item_id>')
-def api_item_by_id(item_id):
-    """Returns the item info for an item with the given numeric or text ID and the default damage value. Text IDs may use a period instead of a colon to separate the plugin prefix, or omit the prefix entirely if it is “minecraft:”."""
+@application.route('/minecraft/items/by-id/<plugin>/<item_id>.json')
+def api_item_by_id(plugin, item_id):
+    """Returns the item info for an item with the given text ID, including variant info."""
     all_items = api_all_items()
-    try:
-        item_id = int(item_id)
-        id_is_numeric = True
-    except ValueError:
-        id_is_numeric = False
-        item_id = re.sub('\\.', ':', str(item_id))
-    if id_is_numeric:
-        plugin = 'minecraft'
-        for string_id, item in all_items[plugin].items():
-            if item.get('blockID') == item_id:
-                item_id = string_id
-                ret = item
-                if 'blockInfo' in ret:
-                    ret.update(ret['blockInfo'])
-                    del ret['blockInfo']
-                break
-            if item.get('itemID') == item_id:
-                item_id = string_id
-                ret = item
-                if 'blockInfo' in ret:
-                    del ret['blockInfo']
-                break
-        else:
-            bottle.abort(404, 'No item with id ' + item_id)
+    if plugin in all_items and item_id in all_items[plugin]:
+        ret = all_items[plugin][item_id]
     else:
-        if ':' in item_id:
-            plugin, item_id = item_id.split(':')
-        else:
-            plugin = 'minecraft'
-        if plugin in all_items and item_id in all_items[plugin]:
-            ret = all_items[plugin][item_id]
-        else:
-            bottle.abort(404, 'No item with id {}:{}'.format(plugin, item_id))
+        bottle.abort(404, 'No item with id {}:{}'.format(plugin, item_id))
     ret['stringID'] = plugin + ':' + item_id
     return ret
 
-@application.route('/minecraft/items/render/dyed-by-id/<item_id>/<color>/png.png')
-def api_item_render_dyed_png(item_id, color):
+@application.route('/minecraft/items/render/dyed-by-id/<plugin>/<item_id>/<color>.png')
+def api_item_render_dyed_png(plugin, item_id, color):
     """Returns a dyed item's base texture (color specified in hex rrggbb), rendered as a PNG image file."""
     import PIL.Image
     import PIL.ImageChops
 
-    item = api_item_by_id(re.sub('\\.', ':', item_id))
+    item = api_item_by_id(plugin, item_id)
     if isinstance(color, int):
         color_string = format(color, 'x')
     else:
         color_string = color
     color = int(color_string[:2], 16), int(color_string[2:4], 16), int(color_string[4:6], 16)
     if config('cache') and os.path.exists(config('cache')):
-        image_dir = os.path.join(config('cache'), 'dyed-items', *item['stringID'].split(':'))
+        image_dir = os.path.join(config('cache'), 'dyed-items', plugin, item_id)
         image_name = color_string + '.png'
         image_path = os.path.join(image_dir, image_name)
         if os.path.exists(image_path): #TODO check if base texture has changed
             # dyed item has already been rendered, use the cached image
             return bottle.static_file(image_name, image_dir, mimetype='image/png')
         else:
-            if not os.path.exists(os.path.join(config('cache'), 'dyed-items', *item['stringID'].split(':'))):
-                os.makedirs(os.path.join(config('cache'), 'dyed-items', *item['stringID'].split(':')))
+            if not os.path.exists(os.path.join(config('cache'), 'dyed-items', plugin, item_id)):
+                os.makedirs(os.path.join(config('cache'), 'dyed-items', plugin, item_id))
             image_file = open(image_path, 'wb')
     else:
         image_file = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
