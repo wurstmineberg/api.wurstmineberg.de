@@ -74,21 +74,32 @@ def config(key=None):
         return j
     return j.get(key, default_config.get(key))
 
-def nbtfile_to_dict(filename):
-    nbtfile = nbt.nbt.NBTFile(filename)
-    nbtdict = nbt_to_dict(nbtfile)
-    if isinstance(nbtdict, dict):
-        nbtdict['api-time-last-modified'] = os.path.getmtime(filename)
-        nbtdict['api-time-result-fetched'] = time.time()
-    return nbtdict
+def nbtfile_to_dict(filename, *, add_metadata=True):
+    """Generates a JSON-serializable value from a path (string or pathlib.Path) representing a NBT file.
 
-def nbt_to_dict(nbtfile):
+    Keyword-only arguments:
+    add_metadata -- If true, converts the result to a dict and adds the .apiTimeLastModified and .apiTimeResultFetched fields.
+    """
+    if isinstance(filename, pathlib.Path):
+        filename = str(filename)
+    nbt_file = nbt.nbt.NBTFile(filename)
+    nbt_dict = nbt_to_dict(nbt_file)
+    if add_metadata:
+        if not isinstance(nbt_dict, dict):
+            nbt_dict = {'data': nbt_dict}
+        if 'apiTimeLastModified' not in nbt_dict:
+            nbtdict['apiTimeLastModified'] = os.path.getmtime(filename)
+        if 'apiTimeResultFetched' not in nbt_dict:
+            nbtdict['apiTimeResultFetched'] = time.time()
+    return nbt_dict
+
+def nbt_to_dict(nbt_file):
     """Generates a JSON-serializable value from an nbt.nbt.NBTFile object."""
     dict = {}
     is_collection = False
     is_dict = False
     collection = []
-    for tag in nbtfile.tags:
+    for tag in nbt_file.tags:
         if hasattr(tag, 'tags'):
             if tag.name is None or tag.name == '':
                 collection.append(nbt_to_dict(tag))
@@ -136,10 +147,12 @@ def api_all_items():
 def api_item_by_damage(item_id, item_damage):
     """Returns the item info for an item with the given numeric or text ID and numeric damage value. Text IDs may use a period instead of a colon to separate the plugin prefix, or omit the prefix entirely if it is “minecraft:”."""
     ret = api_item_by_id(item_id)
-    if 'damageValues' in ret: #TODO 2.0: error if the item has no damage values
-        if str(item_damage) in ret['damageValues']: #TODO 2.0: error if the damage value is not present
-            ret.update(ret['damageValues'][str(item_damage)])
-        del ret['damageValues']
+    if 'damageValues' not in ret:
+        bottle.abort(404, '{} has no damage variants'.format(ret.get('name', 'Item')))
+    if str(item_damage) not in ret['damageValues']:
+        bottle.abort(404, 'Item {} has no damage variant for damage value {}'.format(ret['stringID'], item_damage))
+    ret.update(ret['damageValues'][str(item_damage)])
+    del ret['damageValues']
     return ret
 
 @application.route('/minecraft/items/by-effect/<item_id>/<effect_id>')
