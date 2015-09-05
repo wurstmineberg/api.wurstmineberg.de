@@ -280,10 +280,10 @@ def api_deaths(world): #TODO multiworld
     return deaths
 
 @application.route('/world/<world>/level.json')
-def api_level(world): #TODO multiworld
+def api_level(world):
     """Returns the level.dat encoded as JSON"""
-    nbtfile = os.path.join(config('serverDir'), config('worldName'), 'level.dat') #TODO use systemd-minecraft world object
-    return api.util2.nbtfile_to_dict(nbtfile)
+    nbt_file = minecraft.World(world).path / world / 'level.dat'
+    return api.util2.nbtfile_to_dict(nbt_file)
 
 @application.route('/world/<world>/maps/by-id/<identifier>.json')
 def api_map_by_id(world, identifier): #TODO add multiworld support
