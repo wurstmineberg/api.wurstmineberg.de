@@ -243,6 +243,9 @@ def api_chunk_info_overworld(world, x, y, z):
         else:
             return result >> 4
 
+    x = int(x)
+    y = int(y)
+    z = int(z)
     column = api_chunk_column_overworld(world, x, z)
     for section in column['Level']['Sections']:
         if section['Y'] == y:
