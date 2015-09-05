@@ -85,7 +85,7 @@ def show_index():
     yield '<tr><th style="text-align: left">Endpoint</th><th style="text-align: left">Description</th>\n'
     for route in application.routes:
         if route.rule == '/':
-            yield '\n<tr><td style="white-space: nowrap; font-weight: bold;">/v2/</td><td>This page.</td></tr>'
+            yield '\n<tr><td style="white-space: nowrap; font-weight: bold;">/v2/</td><td>This documentation page for version 2 of the API.</td></tr>'
         elif '<' in route.rule:
             yield '\n<tr><td style="white-space: nowrap;">/v2' + xml.sax.saxutils.escape(route.rule) + '</td><td>' + route.callback.__doc__.format(host=CONFIG['host']) + '</td></tr>'
         else:
