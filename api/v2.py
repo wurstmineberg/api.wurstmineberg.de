@@ -76,10 +76,9 @@ def config():
     else:
         try:
             import people
-        except ImportError:
-            result['peopleConnectionString'] = None
-        else:
             result['peopleConnectionString'] = people.DEFAULT_CONFIG['connectionstring']
+        except:
+            result['peopleConnectionString'] = None
     result['worldsDir'] = pathlib.Path(loaded_config.get('worldsDir', '/opt/wurstmineberg/world'))
     result['webAssets'] = pathlib.Path(loaded_config.get('webAssets', '/opt/git/github.com/wurstmineberg/assets.wurstmineberg.de/branch/dev' if result['isDev'] else '/opt/git/github.com/wurstmineberg/assets.wurstmineberg.de/master'))
     return result
