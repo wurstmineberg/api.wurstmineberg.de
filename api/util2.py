@@ -32,9 +32,9 @@ def nbtfile_to_dict(filename, *, add_metadata=True):
         if not isinstance(nbt_dict, dict):
             nbt_dict = {'data': nbt_dict}
         if 'apiTimeLastModified' not in nbt_dict:
-            nbtdict['apiTimeLastModified'] = os.path.getmtime(filename)
+            nbt_dict['apiTimeLastModified'] = os.path.getmtime(filename)
         if 'apiTimeResultFetched' not in nbt_dict:
-            nbtdict['apiTimeResultFetched'] = time.time()
+            nbt_dict['apiTimeResultFetched'] = time.time()
     return nbt_dict
 
 def nbt_to_dict(nbt_file):
