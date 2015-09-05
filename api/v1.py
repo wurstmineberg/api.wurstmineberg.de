@@ -272,8 +272,12 @@ def api_player_info(player_id):
 @application.route('/player/people.json')
 def api_player_people():
     """Returns the whole people.json file. See http://wiki.wurstmineberg.de/People_file for more info."""
-    with open(config('peopleFile')) as people_json:
-        return json.load(people_json)
+    import people
+    db = people.PeopleDB(people.DEFAULT_CONFIG['connectionstring']).obj_dump(version=2)
+    for person in db['people']:
+        if 'gravatar' in person:
+            del person['gravatar']
+    return db
 
 @application.route('/player/:player_minecraft_name/playerdata.json')
 def api_player_data(player_minecraft_name):

@@ -12,6 +12,7 @@ Requirements
 *   [bottle](http://bottlepy.org/) 0.12
 *   [mcstatus](https://github.com/Dinnerbone/mcstatus) (required for world status endpoints only)
 *   [nbt](https://pypi.python.org/pypi/NBT) 1.4
+*   [people](https://github.com/wurstmineberg/people)
 *   [systemd-minecraft](https://github.com/wurstmineberg/systemd-minecraft)
 
 Configuration

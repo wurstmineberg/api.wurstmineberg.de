@@ -71,6 +71,15 @@ def config():
     result['logPath'] = pathlib.Path(loaded_config.get('logPath', '/opt/wurstmineberg/log'))
     result['mainWorld'] = loaded_config.get('mainWorld', 'wurstmineberg') #TODO load a systemd-minecraft world file
     result['moneysFile'] = pathlib.Path(loaded_config.get('moneysFile', '/opt/wurstmineberg/moneys/moneys.json'))
+    if 'peopleConnectionString' in loaded_config:
+        result['peopleConnectionString'] = loaded_config['peopleConnectionString']
+    else:
+        try:
+            import people
+        except ImportError:
+            result['peopleConnectionString'] = None
+        else:
+            result['peopleConnectionString'] = people.DEFAULT_CONFIG['connectionstring']
     result['worldsDir'] = pathlib.Path(loaded_config.get('worldsDir', '/opt/wurstmineberg/world'))
     result['webAssets'] = pathlib.Path(loaded_config.get('webAssets', '/opt/git/github.com/wurstmineberg/assets.wurstmineberg.de/branch/dev' if result['isDev'] else '/opt/git/github.com/wurstmineberg/assets.wurstmineberg.de/master'))
     return result
@@ -204,12 +213,22 @@ def api_death_games_log():
 @application.route('/people.json')
 def api_player_people():
     """Returns the whole <a href="http://wiki.{host}/People_file/Version_3">people.json</a> file, except for the "gravatar" private field."""
-    raise NotImplementedError('people endpoints NYI') #TODO use the people module; hide private info (gravatar)
+    import people
+    db = people.PeopleDB(CONFIG['peopleConnectionString']).obj_dump(version=3)
+    for person in db['people'].values():
+        if 'gravatar' in person:
+            del person['gravatar']
+    return db
 
 @application.route('/player/<player_id>/info.json')
 def api_player_info(player_id):
     """Returns the section of <a href="http://wiki.{host}/People_file/Version_3">people.json</a> that corresponds to the player."""
-    raise NotImplementedError('people endpoints NYI') #TODO use the people module; hide private info (gravatar)
+    import people
+    db = people.PeopleDB(CONFIG['peopleConnectionString']).obj_dump(version=3)
+    person = db['people'][player_id]
+    if 'gravatar' in person:
+        del person['gravatar']
+    return person
 
 @application.route('/world/<world>/deaths/latest.json')
 def api_latest_deaths(world): #TODO multiworld
@@ -684,8 +703,8 @@ def api_whitelist(world): #TODO multiworld
 
 @application.route('/server/players.json')
 def api_playernames():
-    """Returns all known player IDs (Wurstmineberg IDs and Minecraft UUIDs)"""
-    return json.dumps(api.util2.all_players())
+    """Returns an array of all known player IDs (Wurstmineberg IDs and Minecraft UUIDs)"""
+    return json.dumps(api.util2.all_players(), sort_keys=True, indent=4)
 
 @application.route('/server/sessions/lastseen.json')
 def api_sessions_last_seen_all(): #TODO multiworld
