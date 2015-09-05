@@ -1,10 +1,16 @@
+import json
+import nbt.nbt
+import os.path
+import pathlib
+import time
+
 def all_players(): #TODO change to use Wurstmineberg/Minecraft IDs
     """Returns all known player IDs (Wurstmineberg IDs and Minecraft UUIDs)"""
     try:
         data = [entry['name'] for entry in json.loads(api_whitelist())]
     except:
         data = []
-    directory = os.path.join(config('serverDir'), config('worldName'), 'players')
+    directory = os.path.join(config('serverDir'), config('worldName'), 'players') #TODO multiworld
     for root, dirs, files in os.walk(directory):
         for file in files:
             if file.endswith('.dat'):
