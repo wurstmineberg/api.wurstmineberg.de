@@ -226,6 +226,8 @@ def api_chunk_column_overworld(world, x, z):
     """Returns the given chunk column in JSON-encoded <a href="http://minecraft.gamepedia.com/Anvil_file_format">Anvil</a> NBT."""
     import anvil
     world = minecraft.World(world)
+    x = int(x)
+    z = int(z)
     region = anvil.Region(world.path / world.name / 'region' / 'r.{}.{}.mca'.format(x // 32, z // 32))
     chunk_column = region.chunk_column(x, z)
     return api.util2.nbt_to_dict(chunk_column.data)
