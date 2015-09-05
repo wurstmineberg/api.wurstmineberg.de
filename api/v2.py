@@ -71,14 +71,6 @@ def config():
     result['logPath'] = pathlib.Path(loaded_config.get('logPath', '/opt/wurstmineberg/log'))
     result['mainWorld'] = loaded_config.get('mainWorld', 'wurstmineberg') #TODO load a systemd-minecraft world file
     result['moneysFile'] = pathlib.Path(loaded_config.get('moneysFile', '/opt/wurstmineberg/moneys/moneys.json'))
-    if 'peopleConnectionString' in loaded_config:
-        result['peopleConnectionString'] = loaded_config['peopleConnectionString']
-    else:
-        try:
-            import people
-            result['peopleConnectionString'] = people.DEFAULT_CONFIG['connectionstring']
-        except:
-            result['peopleConnectionString'] = 'postgresql://localhost/wurstmineberg'
     result['worldsDir'] = pathlib.Path(loaded_config.get('worldsDir', '/opt/wurstmineberg/world'))
     result['webAssets'] = pathlib.Path(loaded_config.get('webAssets', '/opt/git/github.com/wurstmineberg/assets.wurstmineberg.de/branch/dev' if result['isDev'] else '/opt/git/github.com/wurstmineberg/assets.wurstmineberg.de/master'))
     return result
@@ -213,7 +205,7 @@ def api_death_games_log():
 def api_player_people():
     """Returns the whole <a href="http://wiki.{host}/People_file/Version_3">people.json</a> file, except for the "gravatar" private field."""
     import people
-    db = people.PeopleDB(CONFIG['peopleConnectionString']).obj_dump(version=3)
+    db = people.get_people_db().obj_dump(version=3)
     for person in db['people'].values():
         if 'gravatar' in person:
             del person['gravatar']
@@ -223,7 +215,7 @@ def api_player_people():
 def api_player_info(player_id):
     """Returns the section of <a href="http://wiki.{host}/People_file/Version_3">people.json</a> that corresponds to the player."""
     import people
-    db = people.PeopleDB(CONFIG['peopleConnectionString']).obj_dump(version=3)
+    db = people.get_people_db().obj_dump(version=3)
     person = db['people'][player_id]
     if 'gravatar' in person:
         del person['gravatar']

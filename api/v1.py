@@ -273,7 +273,7 @@ def api_player_info(player_id):
 def api_player_people():
     """Returns the whole people.json file. See http://wiki.wurstmineberg.de/People_file for more info."""
     import people
-    db = people.PeopleDB(people.DEFAULT_CONFIG['connectionstring']).obj_dump(version=2)
+    db = people.get_people_db().obj_dump(version=2)
     for person in db['people']:
         if 'gravatar' in person:
             del person['gravatar']
