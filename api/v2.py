@@ -78,7 +78,7 @@ def config():
             import people
             result['peopleConnectionString'] = people.DEFAULT_CONFIG['connectionstring']
         except:
-            result['peopleConnectionString'] = None
+            result['peopleConnectionString'] = 'postgresql://localhost/wurstmineberg'
     result['worldsDir'] = pathlib.Path(loaded_config.get('worldsDir', '/opt/wurstmineberg/world'))
     result['webAssets'] = pathlib.Path(loaded_config.get('webAssets', '/opt/git/github.com/wurstmineberg/assets.wurstmineberg.de/branch/dev' if result['isDev'] else '/opt/git/github.com/wurstmineberg/assets.wurstmineberg.de/master'))
     return result
