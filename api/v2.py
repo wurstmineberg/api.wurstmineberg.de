@@ -221,6 +221,15 @@ def api_player_info(player_id):
         del person['gravatar']
     return person
 
+@application.route('/world/<world>/chunks/overworld/column/<x>/<z>.json')
+def api_chunk_column_overworld(world, x, z):
+    """Returns the given chunk column in JSON-encoded <a href="http://minecraft.gamepedia.com/Anvil_file_format">Anvil</a> NBT."""
+    import anvil
+    world = minecraft.World(world)
+    region = anvil.Region(world.path / world / 'region' / 'r.{}.{}.mca'.format(x // 32, z // 32))
+    chunk_column = region.chunk_column(x, z)
+    return api.util2.nbt_to_dict(chunk_column.data)
+
 @application.route('/world/<world>/deaths/latest.json')
 def api_latest_deaths(world): #TODO multiworld
     """Returns JSON containing information about the most recent death of each player"""
