@@ -291,10 +291,11 @@ def api_chunk_info_overworld(world, x, y, z):
         layers.append(rows)
     if 'Entities' in column['Level']:
         for entity in column['Level']['Entities']:
-            block_info = layers[int(entity['Pos'][1]) & 15][int(entity['Pos'][2]) & 15][int(entity['Pos'][0]) & 15]
-            if 'entities' not in block_info:
-                block_info['entities'] = []
-            block_info['entities'].append(entity)
+            if y * 16 < entity['Pos'][2] < y * 16 + 16: # make sure the entity is in the right section
+                block_info = layers[int(entity['Pos'][1]) & 15][int(entity['Pos'][2]) & 15][int(entity['Pos'][0]) & 15]
+                if 'entities' not in block_info:
+                    block_info['entities'] = []
+                block_info['entities'].append(entity)
     if 'TileEntities' in column['Level']:
         for tile_entity in column['Level']['TileEntities']:
             block_info = layers[tile_entity['y'] & 15][tile_entity['z'] & 15][tile_entity['x'] & 15]
