@@ -404,62 +404,6 @@ def api_maps_index():
         ret[str(map_id)] = nbt_dict
     return ret
 
-def map_image(map_dict):
-    """Returns a PIL.Image.Image object of the map.
-
-    Required arguments:
-    map_dict -- A dict representing NBT data for a map, as returned by api_map_by_id
-    """
-    import PIL.Image
-
-    map_palette = [
-        (0, 0, 0),
-        (127, 178, 56),
-        (247, 233, 163),
-        (167, 167, 167),
-        (255, 0, 0),
-        (160, 160, 255),
-        (167, 167, 167),
-        (0, 124, 0),
-        (255, 255, 255),
-        (164, 168, 184),
-        (183, 106, 47),
-        (112, 112, 112),
-        (64, 64, 255),
-        (104, 83, 50),
-        (255, 252, 245),
-        (216, 127, 51),
-        (178, 76, 216),
-        (102, 153, 216),
-        (229, 229, 51),
-        (127, 204, 25),
-        (242, 127, 165),
-        (76, 76, 76),
-        (153, 153, 153),
-        (76, 127, 153),
-        (127, 63, 178),
-        (51, 76, 178),
-        (102, 76, 51),
-        (102, 127, 51),
-        (153, 51, 51),
-        (25, 25, 25),
-        (250, 238, 77),
-        (92, 219, 213),
-        (74, 128, 255),
-        (0, 217, 58),
-        (21, 20, 31),
-        (112, 2, 0)
-    ]
-    ret = PIL.Image.new('RGBA', (map_dict['data']['width'], map_dict['data']['height']), color=(0, 0, 0, 0))
-    for i, color in enumerate(map_dict['data']['colors']):
-        y, x = divmod(i, map_dict['data']['width'])
-        base_color, color_variant = divmod(color, 4)
-        if base_color == 0:
-            continue
-        color = tuple(round(palette_color * [180, 220, 255, 135][color_variant] / 255) for palette_color in map_palette[base_color]) + (255,)
-        ret.putpixel((x, y), color)
-    return ret
-
 @application.route('/server/maps/render/:identifier/png.png')
 def api_map_render_png(identifier):
     """Returns the map item with damage value :identifier, rendered as a PNG image file."""
@@ -478,7 +422,7 @@ def api_map_render_png(identifier):
         map_file = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
         map_path = map_file.name
         map_dir, map_name = os.path.split(map_path)
-    image = map_image(api_map_by_id(identifier))
+    image = api.util.map_image(api_map_by_id(identifier))
     image.save(map_file, 'PNG')
     map_file.close()
     return bottle.static_file(map_name, map_dir, mimetype='image/png')

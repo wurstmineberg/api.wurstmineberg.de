@@ -8,6 +8,7 @@ import contextlib
 from datetime import datetime
 import io
 import json
+import minecraft
 import nbt.nbt
 import os
 import os.path
@@ -20,6 +21,7 @@ import uuid
 import xml.sax.saxutils
 
 import api.util
+import api.util2
 
 def parse_version_string():
     path = pathlib.Path(__file__).resolve().parent.parent # go up 2 levels, from repo/api/v2.py to repo, where README.md is located
@@ -46,6 +48,7 @@ except:
     CONFIG_PATH = '/opt/wurstmineberg/config/api.json'
 
 DOCUMENTATION_INTRO = """
+<!DOCTYPE html>
 <h1>Wurstmineberg API v2</h1>
 <p>Welcome to the Wurstmineberg Minecraft API. Feel free to play around!</p>
 <p>This is version {} of the API. Currently available API endpoints:</p>
@@ -53,76 +56,26 @@ DOCUMENTATION_INTRO = """
 
 application = api.util.Bottle()
 
-def config(key=None):
-    default_config = {
-        'isDev': False,
-        'jlogPath': '/opt/wurstmineberg/jlog',
-        'logPath': '/opt/wurstmineberg/log',
-        'peopleFile': '/opt/wurstmineberg/config/people.json',
-        'mainWorld': 'wurstmineberg',
-        'moneysFile': '/opt/wurstmineberg/moneys/moneys.json',
-        'serverIP': 'wurstmineberg.de',
-        'worldsDir': '/opt/wurstmineberg/world',
-        'webAssets': '/opt/git/github.com/wurstmineberg/assets.wurstmineberg.de/master'
-    }
+def config():
     try:
         with open(CONFIG_PATH) as config_file:
-            j = json.load(config_file)
+            loaded_config = json.load(config_file)
     except:
-        j = default_config
-    if key is None:
-        return j
-    return j.get(key, default_config.get(key))
+        loaded_config = {}
+    result = {
+        'isDev': loaded_config.get('isDev', False)
+    }
+    result['host'] = loaded_config.get('host', 'dev.wurstmineberg.de' if result['isDev'] else 'wurstmineberg.de')
+    result['cache'] = pathlib.Path(loaded_config.get('cache', '/opt/wurstmineberg/dev-api-cache' if result['isDev'] else '/opt/wurstmineberg/api-cache'))
+    result['jlogPath'] = pathlib.Path(loaded_config.get('jlogPath', '/opt/wurstmineberg/jlog'))
+    result['logPath'] = pathlib.Path(loaded_config.get('logPath', '/opt/wurstmineberg/log'))
+    result['mainWorld'] = loaded_config.get('mainWorld', 'wurstmineberg') #TODO load a systemd-minecraft world file
+    result['moneysFile'] = pathlib.Path(loaded_config.get('moneysFile', '/opt/wurstmineberg/moneys/moneys.json'))
+    result['worldsDir'] = pathlib.Path(loaded_config.get('worldsDir', '/opt/wurstmineberg/world'))
+    result['webAssets'] = pathlib.Path(loaded_config.get('webAssets', '/opt/git/github.com/wurstmineberg/assets.wurstmineberg.de/branch/dev' if result['isDev'] else '/opt/git/github.com/wurstmineberg/assets.wurstmineberg.de/master'))
+    return result
 
-def nbtfile_to_dict(filename, *, add_metadata=True):
-    """Generates a JSON-serializable value from a path (string or pathlib.Path) representing a NBT file.
-
-    Keyword-only arguments:
-    add_metadata -- If true, converts the result to a dict and adds the .apiTimeLastModified and .apiTimeResultFetched fields.
-    """
-    if isinstance(filename, pathlib.Path):
-        filename = str(filename)
-    nbt_file = nbt.nbt.NBTFile(filename)
-    nbt_dict = nbt_to_dict(nbt_file)
-    if add_metadata:
-        if not isinstance(nbt_dict, dict):
-            nbt_dict = {'data': nbt_dict}
-        if 'apiTimeLastModified' not in nbt_dict:
-            nbtdict['apiTimeLastModified'] = os.path.getmtime(filename)
-        if 'apiTimeResultFetched' not in nbt_dict:
-            nbtdict['apiTimeResultFetched'] = time.time()
-    return nbt_dict
-
-def nbt_to_dict(nbt_file):
-    """Generates a JSON-serializable value from an nbt.nbt.NBTFile object."""
-    dict = {}
-    is_collection = False
-    is_dict = False
-    collection = []
-    for tag in nbt_file.tags:
-        if hasattr(tag, 'tags'):
-            if tag.name is None or tag.name == '':
-                collection.append(nbt_to_dict(tag))
-                is_collection = True
-            else:
-                dict[tag.name] = nbt_to_dict(tag)
-                is_dict = True
-        else:
-            value = tag.value
-            if isinstance(value, bytearray):
-                value = list(value)
-            if tag.name is None or tag.name == '':
-                collection.append(value)
-                is_collection = True
-            else:
-                dict[tag.name] = value
-                is_dict = True
-    if is_collection and is_dict:
-        dict['collection'] = collection
-    if is_dict:
-        return dict
-    else:
-        return collection
+CONFIG = config()
 
 @application.route('/')
 def show_index():
@@ -131,16 +84,24 @@ def show_index():
     yield '<table id="api-endpoints"><tbody>\n'
     yield '<tr><th style="text-align: left">Endpoint</th><th style="text-align: left">Description</th>\n'
     for route in application.routes:
+        if route.rule == '/v2/':
+            yield '\n<tr><td style="white-space: nowrap; font-weight: bold;">/v2/</td><td>This page.</td></tr>'
         if '<' in route.rule:
-            yield '\n<tr><td>/v2' + xml.sax.saxutils.escape(route.rule) + '</td><td>' + str(route.callback.__doc__) + '</td></tr>'
+            yield '\n<tr><td style="white-space: nowrap;">/v2' + xml.sax.saxutils.escape(route.rule) + '</td><td>' + route.callback.__doc__.format(host=CONFIG['host']) + '</td></tr>'
         else:
-            yield '\n<tr><td><a href="/v2' + route.rule + '">/v2' + route.rule + '</a></td><td>' + str(route.callback.__doc__) + '</td></tr>'
+            yield '\n<tr><td style="white-space: nowrap;"><a href="/v2' + route.rule + '">/v2' + route.rule + '</a></td><td>' + route.callback.__doc__.format(host=CONFIG['host']) + '</td></tr>'
     yield '</tbody></table>'
+
+@application.route('/meta/moneys.json')
+def api_moneys():
+    """Returns the moneys.json file."""
+    with CONFIG['moneysFile'].open() as moneys_json:
+        return json.load(moneys_json)
 
 @application.route('/minecraft/items/all.json')
 def api_all_items():
-    """Returns the item info JSON file, see http://assets.wurstmineberg.de/json/items.json.description.txt for documentation"""
-    with open(os.path.join(config('webAssets'), 'json', 'items.json')) as items_file:
+    """Returns the item info JSON file (<a href="http://assets.{host}/json/items.json.description.txt">documentation</a>)"""
+    with (CONFIG['webAssets'] / 'json' / 'items.json').open() as items_file:
         return json.load(items_file)
 
 @application.route('/minecraft/items/by-damage/<plugin>/<item_id>/<item_damage>.json')
@@ -155,21 +116,27 @@ def api_item_by_damage(plugin, item_id, item_damage):
     del ret['damageValues']
     return ret
 
-@application.route('/minecraft/items/by-effect/<plugin>/<item_id>/<effect_id>.json')
-def api_item_by_effect(plugin, item_id, effect_id):
+@application.route('/minecraft/items/by-effect/<plugin>/<item_id>/<effect_plugin>/<effect_id>.json')
+def api_item_by_effect(plugin, item_id, effect_plugin, effect_id):
     """Returns the item info for an item with the given text ID, tagged with the given text effect ID."""
     ret = api_item_by_id(plugin, item_id)
     if 'effects' not in ret:
         bottle.abort(404, '{} has no effect variants'.format(ret.get('name', 'Item')))
-    effect_id = re.sub('\\.', ':', effect_id)
-    if ':' in effect_id:
-        effect_plugin, effect_id = effect_id.split(':')
-    else:
-        effect_plugin = 'minecraft'
     if effect_plugin not in ret['effects'] or effect_id not in ret['effects'][effect_plugin]:
         bottle.abort(404, 'Item {} has no effect variant for {}:{}'.format(ret['stringID'], effect_plugin, effect_id))
     ret.update(ret['effects'][effect_plugin][effect_id])
     del ret['effects']
+    return ret
+
+@application.route('/minecraft/items/by-id/<plugin>/<item_id>.json')
+def api_item_by_id(plugin, item_id):
+    """Returns the item info for an item with the given text ID, including variant info."""
+    all_items = api_all_items()
+    if plugin in all_items and item_id in all_items[plugin]:
+        ret = all_items[plugin][item_id]
+    else:
+        bottle.abort(404, 'No item with id {}:{}'.format(plugin, item_id))
+    ret['stringID'] = plugin + ':' + item_id
     return ret
 
 @application.route('/minecraft/items/by-tag/<plugin>/<item_id>/<tag_value>.json')
@@ -185,17 +152,6 @@ def api_item_by_tag_variant(plugin, item_id, tag_value):
     del ret['tagVariants']
     return ret
 
-@application.route('/minecraft/items/by-id/<plugin>/<item_id>.json')
-def api_item_by_id(plugin, item_id):
-    """Returns the item info for an item with the given text ID, including variant info."""
-    all_items = api_all_items()
-    if plugin in all_items and item_id in all_items[plugin]:
-        ret = all_items[plugin][item_id]
-    else:
-        bottle.abort(404, 'No item with id {}:{}'.format(plugin, item_id))
-    ret['stringID'] = plugin + ':' + item_id
-    return ret
-
 @application.route('/minecraft/items/render/dyed-by-id/<plugin>/<item_id>/<color>.png')
 def api_item_render_dyed_png(plugin, item_id, color):
     """Returns a dyed item's base texture (color specified in hex rrggbb), rendered as a PNG image file."""
@@ -208,7 +164,7 @@ def api_item_render_dyed_png(plugin, item_id, color):
     else:
         color_string = color
     color = int(color_string[:2], 16), int(color_string[2:4], 16), int(color_string[4:6], 16)
-    if config('cache') and os.path.exists(config('cache')):
+    if CONFIG['cache'].exists(): #TODO pathlib
         image_dir = os.path.join(config('cache'), 'dyed-items', plugin, item_id)
         image_name = color_string + '.png'
         image_path = os.path.join(image_dir, image_name)
@@ -229,93 +185,38 @@ def api_item_render_dyed_png(plugin, item_id, color):
     image_file.close()
     return bottle.static_file(image_name, image_dir, mimetype='image/png')
 
-@application.route('/minigame/achievements/winners.json')
-def api_achievement_winners():
-    """Returns a list of Wurstmineberg IDs of all players who have completed all achievements, ordered chronologically by the time they got their last achievement. This list is emptied each time a new achievement is added to Minecraft."""
-    with open(os.path.join(config('logPath'), 'achievements.log')) as achievements_log:
-        return json.dumps(list(line.strip() for line in achievements_log))
+@application.route('/minigame/achievements/<world>/scoreboard.json')
+def api_achievement_scores(world):
+    """Returns an object mapping player's IDs to their current score in the achievement run."""
+    raise NotImplementedError('achievement run endpoints NYI') #TODO (requires log parsing)
+
+@application.route('/minigame/achievements/<world>/winners.json')
+def api_achievement_winners(world):
+    """Returns an array of IDs of all players who have completed all achievements, ordered chronologically by the time they got their last achievement. This list is emptied each time a new achievement is added to Minecraft."""
+    raise NotImplementedError('achievement run endpoints NYI') #TODO (requires log parsing)
 
 @application.route('/minigame/deathgames/log.json')
 def api_death_games_log():
-    """Returns the <a href="http://wiki.wurstmineberg.de/Death_Games">Death Games</a> log, listing attempts in chronological order."""
-    with open(os.path.join(config('logPath'), 'deathgames.json')) as death_games_logfile:
+    """Returns the <a href="http://wiki.{host}/Death_Games">Death Games</a> log, listing attempts in chronological order."""
+    with (CONFIG['logPath'] / 'deathgames.json').open() as death_games_logfile:
         return json.load(death_games_logfile)
+
+@application.route('/people.json')
+def api_player_people():
+    """Returns the whole <a href="http://wiki.{host}/People_file/Version_3">people.json</a> file, except for the "gravatar" private field."""
+    raise NotImplementedError('people endpoints NYI') #TODO use the people module; hide private info (gravatar)
 
 @application.route('/player/<player_id>/info.json')
 def api_player_info(player_id):
-    """Returns the section of people.json that corresponds to the player. See http://wiki.wurstmineberg.de/People_file for more info."""
-    person_data = None
-    with open(config('peopleFile')) as people_json:
-        data = json.load(people_json)
-        if isinstance(data, dict):
-            data = data['people']
-        person_data = list(filter(lambda a: player_id == a['id'], data))[0]
-    return person_data
+    """Returns the section of <a href="http://wiki.{host}/People_file/Version_3">people.json</a> that corresponds to the player."""
+    raise NotImplementedError('people endpoints NYI') #TODO use the people module; hide private info (gravatar)
 
-@application.route('/player/people.json')
-def api_player_people():
-    """Returns the whole people.json file. See http://wiki.wurstmineberg.de/People_file for more info."""
-    with open(config('peopleFile')) as people_json:
-        return json.load(people_json)
-
-@application.route('/player/<player_minecraft_name>/playerdata.json')
-def api_player_data(player_minecraft_name):
-    """Returns the player data encoded as JSON, also accepts the player id instead of the Minecraft name"""
-    nbtfile = os.path.join(config('serverDir'), config('worldName'), 'players', player_minecraft_name + '.dat')
-    if not os.path.exists(nbtfile):
-        for whitelist_entry in json.loads(api_whitelist()):
-            if whitelist_entry['name'] == player_minecraft_name:
-                uuid = whitelist_entry['uuid']
-                break
-        else:
-            uuid = api_player_info(player_minecraft_name)['minecraftUUID']
-        if '-' not in uuid:
-            uuid = uuid[:8] + '-' + uuid[8:12] + '-' + uuid[12:16] + '-' + uuid[16:20] + '-' + uuid[20:]
-        nbtfile = os.path.join(config('serverDir'), config('worldName'), 'playerdata', uuid + '.dat')
-    return nbtfile_to_dict(nbtfile)
-
-@application.route('/player/<player_id>/stats-grouped.json')
-def api_player_stats_grouped(player_id):
-    """Returns the player's stats formatted as JSON with stats grouped into objects by category"""
-    stats = api_stats(player_id)
-    ret = {}
-    for stat_name, value in stats.items():
-        parent = ret
-        key_path = stat_name.split('.')
-        for key in key_path[:-1]:
-            if key not in parent:
-                parent[key] = {}
-            parent = parent[key]
-        parent[key_path[-1]] = value
-    return ret
-
-@application.route('/player/<player_minecraft_name>/stats.json')
-def api_stats(player_minecraft_name):
-    """Returns the stats JSON file from the server, also accepts the player id instead of the Minecraft name"""
-    try:
-        player_minecraft_name = api_player_info(player_minecraft_name)['minecraft']
-    except:
-        pass # no such person or already correct
-    stats_file = os.path.join(config('serverDir'), config('worldName'), 'stats', player_minecraft_name + '.json')
-    if not os.path.exists(stats_file):
-        for whitelist_entry in json.loads(api_whitelist()):
-            if whitelist_entry['name'] == player_minecraft_name:
-                uuid = whitelist_entry['uuid']
-                break
-        else:
-            uuid = api_player_info(player_minecraft_name)['minecraftUUID']
-        if '-' not in uuid:
-            uuid = uuid[:8] + '-' + uuid[8:12] + '-' + uuid[12:16] + '-' + uuid[16:20] + '-' + uuid[20:]
-        stats_file = os.path.join(config('serverDir'), config('worldName'), 'stats', uuid + '.json')
-    with open(stats_file) as stats:
-        return json.load(stats)
-
-@application.route('/server/deaths/latest.json')
-def api_latest_deaths():
+@application.route('/world/<world>/deaths/latest.json')
+def api_latest_deaths(world): #TODO multiworld
     """Returns JSON containing information about the most recent death of each player"""
     last_person = None
     people_ids = {}
-    with open(config('peopleFile')) as people_json:
+    with open(config('peopleFile')) as people_json: #TODO use people module
         people_data = json.load(people_json)
         if isinstance(people_data, dict):
             people_data = people_data['people']
@@ -323,7 +224,7 @@ def api_latest_deaths():
             if 'id' in person and 'minecraft' in person:
                 people_ids[person['minecraft']] = person['id']
     deaths = {}
-    with open(os.path.join(config('logPath'), 'deaths.log')) as deaths_log:
+    with open(os.path.join(config('logPath'), 'deaths.log')) as deaths_log: #TODO parse world log
         for line in deaths_log:
             match = re.match('([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([^@ ]+) (.*)', line)
             if match and match.group(2) in people_ids:
@@ -337,11 +238,11 @@ def api_latest_deaths():
         'lastPerson': last_person
     }
 
-@application.route('/server/deaths/overview.json')
-def api_deaths():
+@application.route('/world/<world>/deaths/overview.json')
+def api_deaths(world): #TODO multiworld
     """Returns JSON containing information about all recorded player deaths"""
     people_ids = {}
-    with open(config('peopleFile')) as people_json:
+    with open(config('peopleFile')) as people_json: #TODO use people module
         people_data = json.load(people_json)
         if isinstance(people_data, dict):
             people_data = people_data['people']
@@ -349,7 +250,7 @@ def api_deaths():
             if 'id' in person and 'minecraft' in person:
                 people_ids[person['minecraft']] = person['id']
     deaths = collections.defaultdict(list)
-    with open(os.path.join(config('logPath'), 'deaths.log')) as deaths_log:
+    with open(os.path.join(config('logPath'), 'deaths.log')) as deaths_log: #TODO parse world log
         for line in deaths_log:
             match = re.match('([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([^@ ]+) (.*)', line)
             if match and match.group(2) in people_ids:
@@ -360,94 +261,38 @@ def api_deaths():
                 })
     return deaths
 
-@application.route('/server/level.json')
-def api_level():
+@application.route('/world/<world>/level.json')
+def api_level(world): #TODO multiworld
     """Returns the level.dat encoded as JSON"""
-    nbtfile = os.path.join(config('serverDir'), config('worldName'), 'level.dat')
-    return nbtfile_to_dict(nbtfile)
+    nbtfile = os.path.join(config('serverDir'), config('worldName'), 'level.dat') #TODO use systemd-minecraft world object
+    return api.util2.nbtfile_to_dict(nbtfile)
 
-@application.route('/server/maps/by-id/<identifier>')
-def api_map_by_id(identifier):
-    """Returns info about the map item with damage value :identifier, see http://minecraft.gamepedia.com/Map_Item_Format for documentation"""
-    nbt_file = os.path.join(config('serverDir'), config('worldName'), 'data', 'map_' + str(identifier) + '.dat')
-    return nbtfile_to_dict(nbt_file)
+@application.route('/world/<world>/maps/by-id/<identifier>.json')
+def api_map_by_id(world, identifier): #TODO add multiworld support
+    """Returns info about the map item with damage value &lt;identifier&gt;, see <a href="http://minecraft.gamepedia.com/Map_Item_Format">Map Item Format</a> for documentation"""
+    nbt_file = os.path.join(config('serverDir'), config('worldName'), 'data', 'map_' + str(identifier) + '.dat') #TODO use systemd-minecraft world object
+    return api.util2.nbtfile_to_dict(nbt_file)
 
-@application.route('/server/maps/overview.json')
-def api_maps_index():
+@application.route('/world/<world>/maps/overview.json')
+def api_maps_index(world): #TODO add multiworld support
     """Returns a list of existing maps with all of their fields except for the actual colors."""
     ret = {}
-    for filename in os.listdir(os.path.join(config('serverDir'), config('worldName'), 'data')):
+    for filename in os.listdir(os.path.join(config('serverDir'), config('worldName'), 'data')): #TODO use systemd-minecraft world object
         match = re.match('map_([0-9]+).dat', filename)
         if not match:
             continue
         map_id = int(match.group(1))
-        nbt_file = os.path.join(config('serverDir'), config('worldName'), 'data', filename)
-        nbt_dict = nbtfile_to_dict(nbt_file)['data']
+        nbt_file = os.path.join(config('serverDir'), config('worldName'), 'data', filename) #TODO use systemd-minecraft world object
+        nbt_dict = api.util2.nbtfile_to_dict(nbt_file)['data']
         del nbt_dict['colors']
         ret[str(map_id)] = nbt_dict
     return ret
 
-def map_image(map_dict):
-    """Returns a PIL.Image.Image object of the map.
-
-    Required arguments:
-    map_dict -- A dict representing NBT data for a map, as returned by api_map_by_id
-    """
-    import PIL.Image
-
-    map_palette = [
-        (0, 0, 0),
-        (127, 178, 56),
-        (247, 233, 163),
-        (167, 167, 167),
-        (255, 0, 0),
-        (160, 160, 255),
-        (167, 167, 167),
-        (0, 124, 0),
-        (255, 255, 255),
-        (164, 168, 184),
-        (183, 106, 47),
-        (112, 112, 112),
-        (64, 64, 255),
-        (104, 83, 50),
-        (255, 252, 245),
-        (216, 127, 51),
-        (178, 76, 216),
-        (102, 153, 216),
-        (229, 229, 51),
-        (127, 204, 25),
-        (242, 127, 165),
-        (76, 76, 76),
-        (153, 153, 153),
-        (76, 127, 153),
-        (127, 63, 178),
-        (51, 76, 178),
-        (102, 76, 51),
-        (102, 127, 51),
-        (153, 51, 51),
-        (25, 25, 25),
-        (250, 238, 77),
-        (92, 219, 213),
-        (74, 128, 255),
-        (0, 217, 58),
-        (21, 20, 31),
-        (112, 2, 0)
-    ]
-    ret = PIL.Image.new('RGBA', (map_dict['data']['width'], map_dict['data']['height']), color=(0, 0, 0, 0))
-    for i, color in enumerate(map_dict['data']['colors']):
-        y, x = divmod(i, map_dict['data']['width'])
-        base_color, color_variant = divmod(color, 4)
-        if base_color == 0:
-            continue
-        color = tuple(round(palette_color * [180, 220, 255, 135][color_variant] / 255) for palette_color in map_palette[base_color]) + (255,)
-        ret.putpixel((x, y), color)
-    return ret
-
-@application.route('/server/maps/render/<identifier>/png.png')
-def api_map_render_png(identifier):
-    """Returns the map item with damage value :identifier, rendered as a PNG image file."""
-    if config('cache') and os.path.exists(config('cache')):
-        map_dir = os.path.join(config('cache'), 'map-renders')
+@application.route('/world/<world>/maps/render/<identifier>.png')
+def api_map_render_png(world, identifier): #TODO multiworld
+    """Returns the map item with damage value &lt;identifier&gt;, rendered as a PNG image file."""
+    if CONFIG['cache'].exists():
+        map_dir = os.path.join(config('cache'), 'map-renders') #TODO pathlib
         map_name = str(identifier) + '.png'
         map_path = os.path.join(map_dir, map_name)
         if os.path.exists(map_path) and os.path.getmtime(map_path) > os.path.getmtime(os.path.join(config('serverDir'), config('worldName'), 'data', 'map_' + str(identifier) + '.dat')) + 60:
@@ -461,14 +306,77 @@ def api_map_render_png(identifier):
         map_file = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
         map_path = map_file.name
         map_dir, map_name = os.path.split(map_path)
-    image = map_image(api_map_by_id(identifier))
+    image = api.util.map_image(api_map_by_id(identifier))
     image.save(map_file, 'PNG')
     map_file.close()
     return bottle.static_file(map_name, map_dir, mimetype='image/png')
 
-@application.route('/server/playerdata/by-id/<identifier>')
-def api_player_data_by_id(identifier):
-    """Returns a dictionary with Minecraft nicks as the keys, and their player data fields :identifier as the values"""
+@application.route('/world/<world>/player/<player_id>/playerdata.json')
+def api_player_data(world, player_id):
+    """Returns the <a href="http://minecraft.gamepedia.com/Player.dat_format">player data</a> encoded as JSON"""
+    pass #TODO get Minecraft UUID/name
+    nbtfile = os.path.join(config('serverDir'), config('worldName'), 'players', player_minecraft_name + '.dat') #TODO multiworld
+    if not os.path.exists(nbtfile):
+        for whitelist_entry in json.loads(api_whitelist()): #TODO add support for non whitelisted players
+            if whitelist_entry['name'] == player_minecraft_name:
+                uuid = whitelist_entry['uuid']
+                break
+        else:
+            uuid = api_player_info(player_minecraft_name)['minecraftUUID']
+        if '-' not in uuid:
+            uuid = uuid[:8] + '-' + uuid[8:12] + '-' + uuid[12:16] + '-' + uuid[16:20] + '-' + uuid[20:]
+        nbtfile = os.path.join(config('serverDir'), config('worldName'), 'playerdata', uuid + '.dat') #TODO multiworld
+    return api.util2.nbtfile_to_dict(nbtfile)
+
+@application.route('/world/<world>/player/<player_id>/stats.json')
+def api_player_stats(world, player_id):
+    """Returns the player's stats formatted as JSON with stats grouped into objects by category"""
+
+    def api_stats(player_minecraft_name): #TODO deprecate in favor of api_player_stats
+        """Returns the stats JSON file from the server, also accepts the player id instead of the Minecraft name"""
+        try:
+            player_minecraft_name = api_player_info(player_minecraft_name)['minecraft']
+        except:
+            pass # no such person or already correct
+        stats_file = os.path.join(config('serverDir'), config('worldName'), 'stats', player_minecraft_name + '.json') #TODO use systemd-minecraft world object
+        if not os.path.exists(stats_file):
+            for whitelist_entry in json.loads(api_whitelist()):
+                if whitelist_entry['name'] == player_minecraft_name:
+                    uuid = whitelist_entry['uuid']
+                    break
+            else:
+                uuid = api_player_info(player_minecraft_name)['minecraftUUID']
+            if '-' not in uuid:
+                uuid = uuid[:8] + '-' + uuid[8:12] + '-' + uuid[12:16] + '-' + uuid[16:20] + '-' + uuid[20:]
+            stats_file = os.path.join(config('serverDir'), config('worldName'), 'stats', uuid + '.json') #TODO use systemd-minecraft world object
+        with open(stats_file) as stats:
+            return json.load(stats)
+
+    stats = api_stats(player_id) #TODO deprecate that endpoint; multiworld
+    ret = {}
+    for stat_name, value in stats.items():
+        parent = ret
+        key_path = stat_name.split('.')
+        for key in key_path[:-1]:
+            if key not in parent:
+                parent[key] = {}
+            parent = parent[key]
+        parent[key_path[-1]] = value #TODO add support for summary stats (stat.drop)
+    return ret
+
+@application.route('/world/<world>/playerdata/all.json')
+def api_player_data_all(world): #TODO multiworld
+    """Returns the player data of all known players, encoded as JSON"""
+    nbtdicts = {}
+    for user in playernames():
+        with contextlib.suppress(FileNotFoundError):
+            nbtdata = api_player_data(user)
+        nbtdicts[user] = nbtdata
+    return nbtdicts
+
+@application.route('/world/<world>/playerdata/by-id/<identifier>.json')
+def api_player_data_by_id(world, identifier): #TODO multiworld, player IDs
+    """Returns a dictionary with player IDs as the keys, and their player data fields &lt;identifier&gt; as the values"""
     all_data = api_player_data_all()
     data = {}
     for player in all_data:
@@ -478,27 +386,12 @@ def api_player_data_by_id(identifier):
                 data[player] = playerdata[name]
     return data
 
-@application.route('/server/playerdata.json')
-def api_player_data_all():
-    """Returns the player data of all whitelisted players, encoded as JSON"""
-    nbtdicts = {}
-    for user in playernames():
-        with contextlib.suppress(FileNotFoundError):
-            nbtdata = api_player_data(user)
-        nbtdicts[user] = nbtdata
-    return nbtdicts
-
-@application.route('/server/playernames.json')
-def api_playernames():
-    """Returns the Minecraft nicknames of all players on the whitelist"""
-    return json.dumps(playernames())
-
-@application.route('/server/playerstats.json')
-def api_playerstats():
-    """Returns all player stats in one file. This file can be potentially big. Please use one of the other APIs if possible."""
+@application.route('/world/<world>/playerstats/all.json')
+def api_playerstats(world): #TODO multiworld
+    """Returns all player stats in one file. This file can be potentially big. Please use one of the other endpoints if possible."""
     data = {}
     people = None
-    directory = os.path.join(config('serverDir'), config('worldName'), 'stats')
+    directory = os.path.join(config('serverDir'), config('worldName'), 'stats') #TODO use systemd-minecraft world object
     for root, dirs, files in os.walk(directory):
         for file_name in files:
             if file_name.endswith(".json"):
@@ -508,7 +401,7 @@ def api_playerstats():
                     if uuid_filename:
                         uuid = ''.join(uuid_filename.groups())
                         if people is None:
-                            with open(config('peopleFile')) as people_json:
+                            with open(config('peopleFile')) as people_json: #TODO use people module
                                 people = json.load(people_json)
                                 if isinstance(data, dict):
                                     people = people['people']
@@ -519,8 +412,8 @@ def api_playerstats():
                     data[name] = json.loads(playerfile.read())
     return data
 
-@application.route('/server/playerstats/achievement.json')
-def api_playerstats_achievements():
+@application.route('/world/<world>/playerstats/achievement.json')
+def api_playerstats_achievements(world): #TODO multiworld
     """Returns all achievement stats in one file"""
     alldata = api_playerstats()
     data = {}
@@ -535,9 +428,9 @@ def api_playerstats_achievements():
         data[player] = playerdict
     return data
 
-@application.route('/server/playerstats/by-id/<identifier>')
-def api_playerstats_by_id(identifier):
-    """Returns the stat item :identifier from all player stats"""
+@application.route('/world/<world>/playerstats/by-id/<identifier>.json')
+def api_playerstats_by_id(world, identifier): #TODO multiworld
+    """Returns the stat item &lt;identifier&gt; from all player stats"""
     alldata = api_playerstats()
     data = {}
     for player in alldata:
@@ -549,8 +442,8 @@ def api_playerstats_by_id(identifier):
         bottle.abort(404, 'Identifier not found')
     return data
 
-@application.route('/server/playerstats/entity.json')
-def api_playerstats_entities():
+@application.route('/world/<world>/playerstats/entity.json')
+def api_playerstats_entities(world): #TODO multiworld
     """Returns all entity stats in one file"""
     alldata = api_playerstats()
     data = {}
@@ -566,8 +459,8 @@ def api_playerstats_entities():
         data[player] = playerdict
     return data
 
-@application.route('/server/playerstats/general.json')
-def api_playerstats_general():
+@application.route('/world/<world>/playerstats/general.json')
+def api_playerstats_general(world): #TODO multiworld
     """Returns all general stats in one file"""
     all_data = api_playerstats()
     data = {}
@@ -584,8 +477,8 @@ def api_playerstats_general():
         data[player] = player_dict
     return data
 
-@application.route('/server/playerstats/item.json')
-def api_playerstats_items():
+@application.route('/world/<world>/playerstats/item.json')
+def api_playerstats_items(world): #TODO multiworld
     """Returns all item and block stats in one file"""
     all_data = api_playerstats()
     data = {}
@@ -599,15 +492,68 @@ def api_playerstats_items():
         data[player] = player_dict
     return data
 
-@application.route('/server/scoreboard.json')
-def api_scoreboard():
+@application.route('/world/<world>/scoreboard.json')
+def api_scoreboard(world): #TODO multiworld
     """Returns the scoreboard data encoded as JSON"""
-    nbtfile = os.path.join(config('serverDir'), config('worldName'), 'data', 'scoreboard.dat')
-    return nbtfile_to_dict(nbtfile)
+    nbtfile = os.path.join(config('serverDir'), config('worldName'), 'data', 'scoreboard.dat') #TODO use systemd-minecraft world object
+    return api.util2.nbtfile_to_dict(nbtfile)
 
-@application.route('/server/sessions/overview.json')
-def api_sessions():
+@application.route('/world/<world>/sessions/lastseen.json')
+def api_sessions_last_seen_world(world): #TODO multiworld
+    """Returns the last known session for each player"""
+    matches = {
+        'join': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([a-z0-9]+|\\?) joined ([A-Za-z0-9_]{1,16})',
+        'leave': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([a-z0-9]+|\\?) left ([A-Za-z0-9_]{1,16})',
+        'restart': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) @restart',
+        'start': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) @start ([^ ]+)',
+        'stop': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) @stop'
+    }
+    ret = {}
+    with open(os.path.join(config('logPath'), 'logins.log')) as logins_log: #TODO parse world logs
+        for log_line in logins_log:
+            for match_type, match_string in matches.items():
+                match = re.match(match_string, log_line.strip('\n'))
+                if match:
+                    break
+            else:
+                continue
+            if match_type == 'restart':
+                for session in ret.values():
+                    if 'leaveTime' not in session:
+                        session['leaveTime'] = match.group(1)
+                        session['leaveReason'] = 'restart'
+            elif match_type == 'start':
+                for session in ret.values():
+                    if 'leaveTime' not in session:
+                        session['leaveTime'] = match.group(1)
+                        session['leaveReason'] = 'serverStartOverride'
+            elif match_type == 'stop':
+                for session in ret.values():
+                    if 'leaveTime' not in session:
+                        session['leaveTime'] = match.group(1)
+                        session['leaveReason'] = 'serverStop'
+            elif match_type == 'join':
+                if match.group(2) == '?':
+                    continue
+                ret[match.group(2)] = {
+                    'joinTime': match.group(1),
+                    'minecraftNick': match.group(3),
+                    'person': match.group(2)
+                }
+            elif match_type == 'leave':
+                if match.group(2) not in ret:
+                    continue
+                ret[match.group(2)]['leaveTime'] = match.group(1)
+                ret[match.group(2)]['leaveReason'] = 'logout'
+    for session in ret.values():
+        if 'leaveTime' not in session:
+            session['leaveReason'] = 'currentlyOnline'
+    return ret
+
+@application.route('/world/<world>/sessions/overview.json')
+def api_sessions(world): #TODO multiworld
     """Returns known players' sessions since the first recorded server restart"""
+    #TODO log parsing
     uptimes = []
     current_uptime = None
     matches = {
@@ -617,7 +563,7 @@ def api_sessions():
         'start': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) @start ([^ ]+)',
         'stop': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) @stop'
     }
-    with open(os.path.join(config('logPath'), 'logins.log')) as logins_log:
+    with open(os.path.join(config('logPath'), 'logins.log')) as logins_log: #TODO parse world logs
         for log_line in logins_log:
             for match_type, match_string in matches.items():
                 match = re.match(match_string, log_line.strip('\n'))
@@ -677,8 +623,72 @@ def api_sessions():
         uptimes.append(current_uptime)
     return {'uptimes': uptimes}
 
+@application.route('/world/<world>/status.json')
+def api_short_world_status(world): #TODO multiworld
+    """Returns JSON containing whether the server is online, the current Minecraft version, and the list of people who are online. Requires systemd-minecraft and mcstatus."""
+    import mcstatus
+
+    server = mcstatus.MinecraftServer.lookup('wurstmineberg.de')
+    try:
+        status = server.status()
+    except ConnectionRefusedError:
+        main_world = minecraft.World()
+        return {
+            'list': [],
+            'on': false,
+            'version': main_world.version()
+        }
+    else:
+        with open(config('peopleFile')) as people_json: #TODO use people module
+            people_data = json.load(people_json)
+        if isinstance(people_data, dict):
+            people_data = people_data['people']
+
+        def wmb_id(player_info):
+            for person_data in people_data:
+                if 'minecraftUUID' in person_data and uuid.UUID(person_data['minecraftUUID']) == uuid.UUID(player_info.id):
+                    return person_data['id']
+            for person_data in people_data:
+                if person_data['minecraft'] == player_info.name:
+                    return person_data['id']
+
+        return {
+            'list': [wmb_id(player) for player in (status.players.sample or [])],
+            'on': True,
+            'version': status.version.name
+        }
+
+@application.route('/world/<world>/villages/end.json')
+def api_villages_end(): #TODO multiworld
+    """Returns the villages.dat in the End, encoded as JSON"""
+    nbtfile = os.path.join(config('serverDir'), config('worldName'), 'data/villages_end.dat') #TODO use systemd-minecraft world object
+    return api.util2.nbtfile_to_dict(nbtfile)
+
+@application.route('/world/<world>/villages/nether.json')
+def api_villages_nether(): #TODO multiworld
+    """Returns the villages.dat in the Nether, encoded as JSON"""
+    nbtfile = os.path.join(config('serverDir'), config('worldName'), 'data/villages_nether.dat') #TODO use systemd-minecraft world object
+    return api.util2.nbtfile_to_dict(nbtfile)
+
+@application.route('/world/<world>/villages/overworld.json')
+def api_villages_overworld(): #TODO multiworld
+    """Returns the villages.dat in the Overworld, encoded as JSON"""
+    nbtfile = os.path.join(config('serverDir'), config('worldName'), 'data/villages.dat') #TODO use systemd-minecraft world object
+    return api.util2.nbtfile_to_dict(nbtfile)
+
+@application.route('/world/<world>/whitelist.json')
+def api_whitelist(world): #TODO multiworld
+    """For UUID-based worlds (Minecraft 1.7.6 and later), returns the whitelist. For older worlds, the behavior is undefined."""
+    with open(os.path.join(config('serverDir'), 'whitelist.json')) as whitelist: #TODO use systemd-minecraft world object
+        return whitelist.read()
+
+@application.route('/server/players.json')
+def api_playernames():
+    """Returns all known player IDs (Wurstmineberg IDs and Minecraft UUIDs)"""
+    return json.dumps(api.util2.all_players())
+
 @application.route('/server/sessions/lastseen.json')
-def api_sessions_last_seen():
+def api_sessions_last_seen_all(): #TODO multiworld
     """Returns the last known session for each player"""
     matches = {
         'join': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([a-z0-9]+|\\?) joined ([A-Za-z0-9_]{1,16})',
@@ -688,7 +698,7 @@ def api_sessions_last_seen():
         'stop': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) @stop'
     }
     ret = {}
-    with open(os.path.join(config('logPath'), 'logins.log')) as logins_log:
+    with open(os.path.join(config('logPath'), 'logins.log')) as logins_log: #TODO parse server logs
         for log_line in logins_log:
             for match_type, match_string in matches.items():
                 match = re.match(match_string, log_line.strip('\n'))
@@ -729,68 +739,7 @@ def api_sessions_last_seen():
             session['leaveReason'] = 'currentlyOnline'
     return ret
 
-@application.route('/server/status.json')
-def api_short_server_status():
-    """Returns JSON containing whether the server is online, the current Minecraft version, and the list of people who are online. Requires systemd-minecraft and mcstatus."""
-    import minecraft
-    import mcstatus
-
-    server = mcstatus.MinecraftServer.lookup('wurstmineberg.de')
-    try:
-        status = server.status()
-    except ConnectionRefusedError:
-        main_world = minecraft.World()
-        return {
-            'list': [],
-            'on': false,
-            'version': main_world.version()
-        }
-    else:
-        with open(config('peopleFile')) as people_json:
-            people_data = json.load(people_json)
-        if isinstance(people_data, dict):
-            people_data = people_data['people']
-
-        def wmb_id(player_info):
-            for person_data in people_data:
-                if 'minecraftUUID' in person_data and uuid.UUID(person_data['minecraftUUID']) == uuid.UUID(player_info.id):
-                    return person_data['id']
-            for person_data in people_data:
-                if person_data['minecraft'] == player_info.name:
-                    return person_data['id']
-
-        return {
-            'list': [wmb_id(player) for player in (status.players.sample or [])],
-            'on': True,
-            'version': status.version.name
-        }
-
-@application.route('/server/whitelist.json')
-def api_whitelist():
-    """For UUID-based Minecraft servers (1.7.6 and later), returns the whitelist. For older servers, the behavior is undefined."""
-    with open(os.path.join(config('serverDir'), 'whitelist.json')) as whitelist:
-        return whitelist.read()
-
-@application.route('/server/world/villages/end.json')
-def api_villages():
-    """Returns the villages.dat of the main world's End, encoded as JSON"""
-    nbtfile = os.path.join(config('serverDir'), config('worldName'), 'data/villages_end.dat')
-    return nbtfile_to_dict(nbtfile)
-
-@application.route('/server/world/villages/nether.json')
-def api_villages():
-    """Returns the villages.dat of the main world's Nether, encoded as JSON"""
-    nbtfile = os.path.join(config('serverDir'), config('worldName'), 'data/villages_nether.dat')
-    return nbtfile_to_dict(nbtfile)
-
-@application.route('/server/world/villages/overworld.json')
-def api_villages():
-    """Returns the villages.dat of the main world's Overworld, encoded as JSON"""
-    nbtfile = os.path.join(config('serverDir'), config('worldName'), 'data/villages.dat')
-    return nbtfile_to_dict(nbtfile)
-
-@application.route('/moneys/moneys.json')
-def api_moneys():
-    """Returns the moneys.json file."""
-    with open(config('moneysFile')) as moneys_json:
-        return json.load(moneys_json)
+@application.route('/server/worlds.json')
+def api_worlds():
+    """Returns an object mapping existing world names to short status summaries"""
+    raise NotImplementedError('worlds endpoint NYI') #TODO
