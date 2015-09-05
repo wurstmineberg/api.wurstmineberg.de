@@ -232,6 +232,82 @@ def api_chunk_column_overworld(world, x, z):
     chunk_column = region.chunk_column(x, z)
     return api.util2.nbt_to_dict(chunk_column.data)
 
+@application.route('/world/<world>/chunks/overworld/chunk/<x>/<y>/<z>.json')
+def api_chunk_info_overworld(world, x, y, z):
+    """Returns information about the given chunk section in JSON format. The nested arrays can be indexed in y-z-x order."""
+
+    def nybble(data, idx):
+        result = data[idx // 2]
+        if idx % 2:
+            return result & 15
+        else:
+            return result >> 4
+
+    column = api_chunk_column_overworld(world, x, z)
+    for section in column['Level']['Sections']:
+        if section['Y'] == y:
+            break
+    else:
+        section = None
+    with (CONFIG['webAssets'] / 'json' / 'biomes.json').open() as biomes_file:
+        biomes = json.load(biomes_file)
+    with (CONFIG['webAssets'] / 'json' / 'items.json').open() as items_file:
+        items = json.load(items_file)
+    layers = []
+    for layer in range(16):
+        block_y = y * 16 + layer
+        rows = []
+        for row in range(16):
+            block_z = z * 16 + row
+            blocks = []
+            for block in range(16):
+                block_x = x * 16 + block
+                block_info ={
+                    'x': block_x,
+                    'y': block_y,
+                    'z': block_z
+                }
+                if 'Biomes' in column['Level']:
+                    block_info['biome'] = biomes['biomes'][str(column['Level']['Biomes'][16 * row + block])]['id']
+                if section is not None:
+                    block_index = 256 * layer + 16 * row + block
+                    block_id = section['Blocks'][block_index]
+                    if 'Add' in section:
+                        block_id += nybble(section['Add'], block_index) << 8
+                    for plugin, plugin_items in items.items():
+                        for item_id, item_info in plugin_items.items():
+                            if 'blockID' in item_info and item_info['blockID'] == block_id:
+                                block_info['id'] = '{}:{}'.format(plugin, item_id)
+                                break
+                    else:
+                        block_info['id'] = block_id
+                    block_info['damage'] = nybble(section['Data'], block_index)
+                    block_info['blockLight'] = nybble(section['BlockLight'], block_index)
+                    block_info['skyLight'] = nybble(section['SkyLight'], block_index)
+                blocks.append(block_info)
+            rows.append(blocks)
+        layers.append(rows)
+    if 'Entities' in column['Level']:
+        for entity in column['Level']['Entities']:
+            block_info = layers[int(entity['Pos'][1]) & 15][int(entity['Pos'][2]) & 15][int(entity['Pos'][0]) & 15]
+            if 'entities' not in block_info:
+                block_info['entities'] = []
+            block_info['entities'].append(entity)
+    if 'TileEntities' in column['Level']:
+        for tile_entity in column['Level']['TileEntities']:
+            block_info = layers[tile_entity['y'] & 15][tile_entity['z'] & 15][tile_entity['x'] & 15]
+            del tile_entity['x']
+            del tile_entity['y']
+            del tile_entity['z']
+            if 'tileEntities' in block_info:
+                block_info['tileEntities'].append(tile_entity)
+            elif 'tileEntity' in block_info:
+                block_info['tileEntities'] = [block_info['tileEntity'], tile_entity]
+                del block_info['tileEntity']
+            else:
+                block_info['tileEntity'] = tile_entity
+    return json.dumps(layers, sort_keys=True, indent=4)
+
 @application.route('/world/<world>/deaths/latest.json')
 def api_latest_deaths(world): #TODO multiworld
     """Returns JSON containing information about the most recent death of each player"""
