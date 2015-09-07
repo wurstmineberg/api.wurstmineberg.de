@@ -760,22 +760,25 @@ def api_short_world_status(world): #TODO multiworld
         }
 
 @application.route('/world/<world>/villages/end.json')
-def api_villages_end(): #TODO multiworld
+def api_villages_end(world):
     """Returns the villages.dat in the End, encoded as JSON"""
-    nbtfile = os.path.join(config('serverDir'), config('worldName'), 'data/villages_end.dat') #TODO use systemd-minecraft world object
-    return api.util2.nbtfile_to_dict(nbtfile)
+    world = minecraft.World(world)
+    nbt_file = world.path / world.name / 'data' / 'villages_end.dat'
+    return api.util2.nbtfile_to_dict(nbt_file)
 
 @application.route('/world/<world>/villages/nether.json')
-def api_villages_nether(): #TODO multiworld
+def api_villages_nether(world):
     """Returns the villages.dat in the Nether, encoded as JSON"""
-    nbtfile = os.path.join(config('serverDir'), config('worldName'), 'data/villages_nether.dat') #TODO use systemd-minecraft world object
-    return api.util2.nbtfile_to_dict(nbtfile)
+    world = minecraft.World(world)
+    nbt_file = world.path / world.name / 'data' / 'villages_nether.dat'
+    return api.util2.nbtfile_to_dict(nbt_file)
 
 @application.route('/world/<world>/villages/overworld.json')
-def api_villages_overworld(): #TODO multiworld
+def api_villages_overworld(world):
     """Returns the villages.dat in the Overworld, encoded as JSON"""
-    nbtfile = os.path.join(config('serverDir'), config('worldName'), 'data/villages.dat') #TODO use systemd-minecraft world object
-    return api.util2.nbtfile_to_dict(nbtfile)
+    world = minecraft.World(world)
+    nbt_file = world.path / world.name / 'data' / 'villages.dat'
+    return api.util2.nbtfile_to_dict(nbt_file)
 
 @application.route('/world/<world>/whitelist.json')
 def api_whitelist(world): #TODO multiworld
