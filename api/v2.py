@@ -69,7 +69,6 @@ def config():
     result['cache'] = pathlib.Path(loaded_config.get('cache', '/opt/wurstmineberg/dev-api-cache' if result['isDev'] else '/opt/wurstmineberg/api-cache'))
     result['jlogPath'] = pathlib.Path(loaded_config.get('jlogPath', '/opt/wurstmineberg/jlog'))
     result['logPath'] = pathlib.Path(loaded_config.get('logPath', '/opt/wurstmineberg/log'))
-    result['mainWorld'] = loaded_config.get('mainWorld', 'wurstmineberg') #TODO load a systemd-minecraft world file
     result['moneysFile'] = pathlib.Path(loaded_config.get('moneysFile', '/opt/wurstmineberg/moneys/moneys.json'))
     result['worldsDir'] = pathlib.Path(loaded_config.get('worldsDir', '/opt/wurstmineberg/world'))
     result['webAssets'] = pathlib.Path(loaded_config.get('webAssets', '/opt/git/github.com/wurstmineberg/assets.wurstmineberg.de/branch/dev' if result['isDev'] else '/opt/git/github.com/wurstmineberg/assets.wurstmineberg.de/master'))
@@ -725,33 +724,30 @@ def api_sessions(world): #TODO multiworld
     return {'uptimes': uptimes}
 
 @application.route('/world/<world>/status.json')
-def api_short_world_status(world): #TODO multiworld
-    """Returns JSON containing whether the server is online, the current Minecraft version, and the list of people who are online. Requires systemd-minecraft and mcstatus."""
+def api_short_world_status(world):
+    """Returns JSON containing whether the server is online, the current Minecraft version, and the list of people who are online. Requires mcstatus and people."""
     import mcstatus
+    import people
 
-    server = mcstatus.MinecraftServer.lookup('wurstmineberg.de')
+    world = minecraft.World(world)
+    server = mcstatus.MinecraftServer.lookup(CONFIG['host'] if world.is_main else '{}.{}'.format(world, CONFIG['host']))
     try:
         status = server.status()
     except ConnectionRefusedError:
-        main_world = minecraft.World()
         return {
             'list': [],
-            'on': false,
-            'version': main_world.version()
+            'on': False,
+            'version': world.version()
         }
     else:
-        with open(config('peopleFile')) as people_json: #TODO use people module
-            people_data = json.load(people_json)
-        if isinstance(people_data, dict):
-            people_data = people_data['people']
-
+        people_data = people.get_people_db().obj_dump(version=3)['people']
         def wmb_id(player_info):
-            for person_data in people_data:
+            for wmb_id, person_data in people_data.items():
                 if 'minecraftUUID' in person_data and uuid.UUID(person_data['minecraftUUID']) == uuid.UUID(player_info.id):
-                    return person_data['id']
-            for person_data in people_data:
+                    return wmb_id
+            for wmb_id, person_data in people_data.items():
                 if person_data['minecraft'] == player_info.name:
-                    return person_data['id']
+                    return wmb_id
 
         return {
             'list': [wmb_id(player) for player in (status.players.sample or [])],

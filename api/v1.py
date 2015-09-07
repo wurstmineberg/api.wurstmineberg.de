@@ -707,7 +707,7 @@ def api_short_server_status():
         main_world = minecraft.World()
         return {
             'list': [],
-            'on': false,
+            'on': False,
             'version': main_world.version()
         }
     else:
