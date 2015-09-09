@@ -43,9 +43,9 @@ __version__ = str(parse_version_string())
 
 try:
     import uwsgi
-    CONFIG_PATH = uwsgi.opt['config_path']
+    CONFIG_PATH = pathlib.Path(uwsgi.opt['config_path'])
 except:
-    CONFIG_PATH = '/opt/wurstmineberg/config/api.json'
+    CONFIG_PATH = pathlib.Path('/opt/wurstmineberg/config/api.json')
 
 DOCUMENTATION_INTRO = """
 <!DOCTYPE html>
@@ -58,7 +58,7 @@ application = api.util.Bottle()
 
 def config():
     try:
-        with open(CONFIG_PATH) as config_file:
+        with CONFIG_PATH.open() as config_file:
             loaded_config = json.load(config_file)
     except:
         loaded_config = {}
@@ -163,26 +163,23 @@ def api_item_render_dyed_png(plugin, item_id, color):
     else:
         color_string = color
     color = int(color_string[:2], 16), int(color_string[2:4], 16), int(color_string[4:6], 16)
-    if CONFIG['cache'].exists(): #TODO pathlib
-        image_dir = os.path.join(config('cache'), 'dyed-items', plugin, item_id)
-        image_name = color_string + '.png'
-        image_path = os.path.join(image_dir, image_name)
-        if os.path.exists(image_path): #TODO check if base texture has changed
+    if CONFIG['cache'].exists():
+        image_path = CONFIG['cache'] / 'dyed-items' / plugin / item_id / (color_string + '.png')
+        if image_path.exists(): #TODO check if base texture has changed
             # dyed item has already been rendered, use the cached image
-            return bottle.static_file(image_name, image_dir, mimetype='image/png')
+            return bottle.static_file(image_path.name, str(image_path.parent), mimetype='image/png')
         else:
-            if not os.path.exists(os.path.join(config('cache'), 'dyed-items', plugin, item_id)):
-                os.makedirs(os.path.join(config('cache'), 'dyed-items', plugin, item_id))
-            image_file = open(image_path, 'wb')
+            if not image_path.parent.exists():
+                image_path.parent.mkdir(parents=True)
+            image_file = image_path.open('wb')
     else:
         image_file = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
-        image_path = image_file.name
-        image_dir, image_name = os.path.split(image_path)
-    image = PIL.Image.open(os.path.join(config('webAssets'), 'img', 'grid-base', item['image']))
+        image_path = pathlib.Path(image_file.name)
+    image = PIL.Image.open(CONFIG['webAssets'] / 'img' / 'grid-base' / item['image']) #TODO remove str cast, requires a feature from the next Pillow release after 2.9.0
     image = PIL.ImageChops.multiply(image, PIL.Image.new('RGBA', image.size, color=color + (255,)))
     image.save(image_file, 'PNG')
     image_file.close()
-    return bottle.static_file(image_name, image_dir, mimetype='image/png')
+    return bottle.static_file(image_path.name, str(image_path.parent), mimetype='image/png')
 
 @application.route('/minigame/achievements/<world>/scoreboard.json')
 def api_achievement_scores(world):
@@ -314,17 +311,16 @@ def api_chunk_info_overworld(world, x, y, z):
 @application.route('/world/<world>/deaths/latest.json')
 def api_latest_deaths(world): #TODO multiworld
     """Returns JSON containing information about the most recent death of each player"""
+    import people
+
     last_person = None
     people_ids = {}
-    with open(config('peopleFile')) as people_json: #TODO use people module
-        people_data = json.load(people_json)
-        if isinstance(people_data, dict):
-            people_data = people_data['people']
-        for person in people_data:
-            if 'id' in person and 'minecraft' in person:
-                people_ids[person['minecraft']] = person['id']
+    people_data = people.get_people_db().obj_dump(version=3)['people']
+    for wmb_id, person in people_data.items():
+        if 'minecraft' in person: #TODO fix for v3 format
+            people_ids[person['minecraft']] = wmb_id
     deaths = {}
-    with open(os.path.join(config('logPath'), 'deaths.log')) as deaths_log: #TODO parse world log
+    with (CONFIG['logPath'] / 'deaths.log').open() as deaths_log: #TODO parse world log
         for line in deaths_log:
             match = re.match('([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([^@ ]+) (.*)', line)
             if match and match.group(2) in people_ids:
@@ -342,15 +338,12 @@ def api_latest_deaths(world): #TODO multiworld
 def api_deaths(world): #TODO multiworld
     """Returns JSON containing information about all recorded player deaths"""
     people_ids = {}
-    with open(config('peopleFile')) as people_json: #TODO use people module
-        people_data = json.load(people_json)
-        if isinstance(people_data, dict):
-            people_data = people_data['people']
-        for person in people_data:
-            if 'id' in person and 'minecraft' in person:
-                people_ids[person['minecraft']] = person['id']
+    people_data = people.get_people_db().obj_dump(version=3)['people']
+    for wmb_id, person in people_data.items():
+        if 'minecraft' in person: #TODO fix for v3 format
+            people_ids[person['minecraft']] = wmb_id
     deaths = collections.defaultdict(list)
-    with open(os.path.join(config('logPath'), 'deaths.log')) as deaths_log: #TODO parse world log
+    with (CONFIG['logPath'] / 'deaths.log').open() as deaths_log: #TODO parse world log
         for line in deaths_log:
             match = re.match('([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([^@ ]+) (.*)', line)
             if match and match.group(2) in people_ids:
@@ -368,9 +361,10 @@ def api_level(world):
     return api.util2.nbtfile_to_dict(nbt_file)
 
 @application.route('/world/<world>/maps/by-id/<identifier>.json')
-def api_map_by_id(world, identifier): #TODO add multiworld support
+def api_map_by_id(world, identifier):
     """Returns info about the map item with damage value &lt;identifier&gt;, see <a href="http://minecraft.gamepedia.com/Map_Item_Format">Map Item Format</a> for documentation"""
-    nbt_file = os.path.join(config('serverDir'), config('worldName'), 'data', 'map_' + str(identifier) + '.dat') #TODO use systemd-minecraft world object
+    world = minecraft.World(world)
+    nbt_file = world.path / world.name / 'data' / 'map_{}.dat'.format(identifier)
     return api.util2.nbtfile_to_dict(nbt_file)
 
 @application.route('/world/<world>/maps/overview.json')
