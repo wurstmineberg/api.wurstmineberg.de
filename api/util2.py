@@ -67,3 +67,12 @@ def nbt_to_dict(nbt_file):
         return dict
     else:
         return collection
+
+def short_world_status(world):
+    """Returns an object in the format required for /server/worlds.json and /world/<world>/status.json (without the player list)"""
+    return {
+        'main': world.is_main,
+        'running': world.status(),
+        'version': world.version(),
+        'whitelist': world.config['whitelist']
+    }

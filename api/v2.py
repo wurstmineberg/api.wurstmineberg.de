@@ -342,16 +342,16 @@ def api_map_by_id(world, identifier):
     return api.util2.nbtfile_to_dict(nbt_file)
 
 @application.route('/world/<world>/maps/overview.json')
-def api_maps_index(world): #TODO add multiworld support
+def api_maps_index(world):
     """Returns a list of existing maps with all of their fields except for the actual colors."""
+    world = minecraft.World(world)
     ret = {}
-    for filename in os.listdir(os.path.join(config('serverDir'), config('worldName'), 'data')): #TODO use systemd-minecraft world object
-        match = re.match('map_([0-9]+).dat', filename)
+    for map_file in (world.world_path / 'data').iterdir():
+        match = re.match('map_([0-9]+).dat', map_file.name)
         if not match:
             continue
         map_id = int(match.group(1))
-        nbt_file = os.path.join(config('serverDir'), config('worldName'), 'data', filename) #TODO use systemd-minecraft world object
-        nbt_dict = api.util2.nbtfile_to_dict(nbt_file)['data']
+        nbt_dict = api.util2.nbtfile_to_dict(map_file)['data']
         del nbt_dict['colors']
         ret[str(map_id)] = nbt_dict
     return ret
@@ -359,25 +359,23 @@ def api_maps_index(world): #TODO add multiworld support
 @application.route('/world/<world>/maps/render/<identifier>.png')
 def api_map_render_png(world, identifier): #TODO multiworld
     """Returns the map item with damage value &lt;identifier&gt;, rendered as a PNG image file."""
+    world = minecraft.World(world)
     if api.util.CONFIG['cache'].exists():
-        map_dir = os.path.join(config('cache'), 'map-renders') #TODO pathlib
-        map_name = str(identifier) + '.png'
-        map_path = os.path.join(map_dir, map_name)
-        if os.path.exists(map_path) and os.path.getmtime(map_path) > os.path.getmtime(os.path.join(config('serverDir'), config('worldName'), 'data', 'map_' + str(identifier) + '.dat')) + 60:
+        map_path = api.util.CONFIG['cache'] / 'map-renders' / '{}.png'.format(identifier)
+        if map_path.exists() and map_path.stat().st_mtime > (world.world_path / 'data' / 'map_{}.dat'.format(identifier)).stat()/st_mtime + 60:
             # map has been rendered over a minute after it was saved, use the cached map file
-            return bottle.static_file(map_name, map_dir, mimetype='image/png')
+            return bottle.static_file(map_path.name, str(map_path.parent), mimetype='image/png')
         else:
-            if not os.path.exists(os.path.join(config('cache'), 'map-renders')):
-                os.mkdir(os.path.join(config('cache'), 'map-renders'))
-            map_file = open(map_path, 'wb')
+            if not map_path.parent.exists():
+                map_path.parent.mkdir(parents=True)
+            map_file = map_path.open('wb')
     else:
         map_file = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
-        map_path = map_file.name
-        map_dir, map_name = os.path.split(map_path)
-    image = api.util.map_image(api_map_by_id(identifier))
+        map_path = pathlib.Path(map_file.name)
+    image = api.util.map_image(api_map_by_id(world.name, identifier))
     image.save(map_file, 'PNG')
     map_file.close()
-    return bottle.static_file(map_name, map_dir, mimetype='image/png')
+    return bottle.static_file(map_path.name, str(map_path.parent), mimetype='image/png')
 
 @application.route('/world/<world>/player/<player_id>/playerdata.json')
 def api_player_data(world, player_id):
@@ -692,21 +690,19 @@ def api_sessions(world): #TODO multiworld
     return {'uptimes': uptimes}
 
 @application.route('/world/<world>/status.json')
-def api_short_world_status(world):
-    """Returns JSON containing whether the server is online, the current Minecraft version, and the list of people who are online. Requires mcstatus and people."""
+def api_world_status(world):
+    """Returns JSON containing info about the given world, including whether the server is running, the current Minecraft version, and the list of people who are online. Requires mcstatus and people."""
     import mcstatus
     import people
 
     world = minecraft.World(world)
+    result = api.util2.short_world_status(world)
     server = mcstatus.MinecraftServer.lookup(api.util.CONFIG['host'] if world.is_main else '{}.{}'.format(world, api.util.CONFIG['host']))
     try:
         status = server.status()
     except ConnectionRefusedError:
-        return {
-            'list': [],
-            'on': False,
-            'version': world.version()
-        }
+        result['list'] = []
+        return result
     else:
         people_data = people.get_people_db().obj_dump(version=3)['people']
         def wmb_id(player_info):
@@ -717,11 +713,8 @@ def api_short_world_status(world):
                 if person_data['minecraft'] == player_info.name:
                     return wmb_id
 
-        return {
-            'list': [wmb_id(player) for player in (status.players.sample or [])],
-            'on': True,
-            'version': status.version.name
-        }
+        result['list'] = [wmb_id(player) for player in (status.players.sample or [])]
+        return result
 
 @application.route('/world/<world>/villages/end.json')
 def api_villages_end(world):
@@ -747,11 +740,12 @@ def api_villages_overworld(world):
 @application.route('/world/<world>/whitelist.json')
 def api_whitelist(world): #TODO multiworld
     """For UUID-based worlds (Minecraft 1.7.6 and later), returns the whitelist. For older worlds, the behavior is undefined."""
-    with open(os.path.join(config('serverDir'), 'whitelist.json')) as whitelist: #TODO use systemd-minecraft world object
+    world = minecraft.World(world)
+    with (world.path / 'whitelist.json').open() as whitelist:
         return whitelist.read()
 
 @application.route('/server/players.json')
-def api_playernames():
+def api_player_ids():
     """Returns an array of all known player IDs (Wurstmineberg IDs and Minecraft UUIDs)"""
     return json.dumps(api.util2.all_players(), sort_keys=True, indent=4)
 
@@ -809,5 +803,5 @@ def api_sessions_last_seen_all(): #TODO multiworld
 
 @application.route('/server/worlds.json')
 def api_worlds():
-    """Returns an object mapping existing world names to short status summaries"""
-    raise NotImplementedError('worlds endpoint NYI') #TODO
+    """Returns an object mapping existing world names to short status summaries (like those returned by /world/&lt;world&gt;/status.json but without the lists of online players)"""
+    return {world.name: api.util2.short_world_status(world) for world in minecraft.worlds()}
