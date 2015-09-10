@@ -1,4 +1,5 @@
 import bottle
+import pathlib
 
 try:
     import uwsgi
