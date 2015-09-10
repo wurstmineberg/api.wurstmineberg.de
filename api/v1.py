@@ -8,6 +8,7 @@ import contextlib
 from datetime import datetime
 import io
 import json
+import minecraft
 import nbt.nbt
 import os
 import os.path
@@ -18,12 +19,7 @@ import time
 import uuid
 
 import api.util
-
-try:
-    import uwsgi
-    CONFIG_PATH = uwsgi.opt['config_path']
-except:
-    CONFIG_PATH = '/opt/wurstmineberg/config/api.json'
+import api.v2
 
 DOCUMENTATION_INTRO = """
 <h1>Wurstmineberg API v1</h1>
@@ -33,27 +29,9 @@ DOCUMENTATION_INTRO = """
 
 application = api.util.Bottle()
 
-def config(key=None):
-    default_config = {
-        'jlogPath': '/opt/wurstmineberg/jlog',
-        'logPath': '/opt/wurstmineberg/log',
-        'peopleFile': '/opt/wurstmineberg/config/people.json',
-        'moneysFile': '/opt/wurstmineberg/moneys/moneys.json',
-        'serverIP': 'wurstmineberg.de',
-        'serverDir': '/opt/wurstmineberg/server',
-        'webAssets': '/opt/git/github.com/wurstmineberg/assets.wurstmineberg.de/master',
-        'worldName': 'wurstmineberg'
-    }
-    try:
-        with open(CONFIG_PATH) as config_file:
-            j = json.load(config_file)
-    except:
-        j = default_config
-    if key is None:
-        return j
-    return j.get(key, default_config.get(key))
-
 def nbtfile_to_dict(filename):
+    if isinstance(filename, pathlib.Path):
+        filename = str(filename)
     nbtfile = nbt.nbt.NBTFile(filename)
     nbtdict = nbt_to_dict(nbtfile)
     if isinstance(nbtdict, dict):
@@ -98,8 +76,8 @@ def playernames():
         data = [entry['name'] for entry in json.loads(api_whitelist())]
     except:
         data = []
-    directory = os.path.join(config('serverDir'), config('worldName'), 'players')
-    for root, dirs, files in os.walk(directory):
+    directory = minecraft.World().world_path / 'players'
+    for root, dirs, files in os.walk(str(directory)):
         for file in files:
             if file.endswith('.dat'):
                 name = os.path.splitext(file)[0]
@@ -121,13 +99,13 @@ def show_index():
 @application.route('/deathgames/log.json')
 def api_death_games_log():
     """Returns the Death Games log, listing attempts in chronological order. See http://wiki.wurstmineberg.de/Death_Games for more info."""
-    with open(os.path.join(config('logPath'), 'deathgames.json')) as death_games_logfile:
+    with (api.util.CONFIG['logPath'] / 'deathgames.json').open() as death_games_logfile:
         return json.load(death_games_logfile)
 
 @application.route('/minecraft/items/all.json')
 def api_all_items():
     """Returns the item info JSON file, see http://assets.wurstmineberg.de/json/items.json.description.txt for documentation"""
-    with open(os.path.join(config('webAssets'), 'json', 'items.json')) as items_file:
+    with (api.util.CONFIG['webAssets'] / 'json' / 'items.json').open() as items_file:
         return json.load(items_file)
 
 @application.route('/minecraft/items/by-damage/:item_id/:item_damage')
@@ -213,65 +191,32 @@ def api_item_by_id(item_id):
 @application.route('/minecraft/items/render/dyed-by-id/:item_id/:color/png.png')
 def api_item_render_dyed_png(item_id, color):
     """Returns a dyed item's base texture (color specified in hex rrggbb), rendered as a PNG image file."""
-    import PIL.Image
-    import PIL.ImageChops
-
-    item = api_item_by_id(re.sub('\\.', ':', item_id))
-    if isinstance(color, int):
-        color_string = format(color, 'x')
-    else:
-        color_string = color
-    color = int(color_string[:2], 16), int(color_string[2:4], 16), int(color_string[4:6], 16)
-    if config('cache') and os.path.exists(config('cache')):
-        image_dir = os.path.join(config('cache'), 'dyed-items', *item['stringID'].split(':'))
-        image_name = color_string + '.png'
-        image_path = os.path.join(image_dir, image_name)
-        if os.path.exists(image_path): #TODO check if base texture has changed
-            # dyed item has already been rendered, use the cached image
-            return bottle.static_file(image_name, image_dir, mimetype='image/png')
-        else:
-            if not os.path.exists(os.path.join(config('cache'), 'dyed-items', *item['stringID'].split(':'))):
-                os.makedirs(os.path.join(config('cache'), 'dyed-items', *item['stringID'].split(':')))
-            image_file = open(image_path, 'wb')
-    else:
-        image_file = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
-        image_path = image_file.name
-        image_dir, image_name = os.path.split(image_path)
-    image = PIL.Image.open(os.path.join(config('webAssets'), 'img', 'grid-base', item['image']))
-    image = PIL.ImageChops.multiply(image, PIL.Image.new('RGBA', image.size, color=color + (255,)))
-    image.save(image_file, 'PNG')
-    image_file.close()
-    return bottle.static_file(image_name, image_dir, mimetype='image/png')
+    plugin, item_id = item_id.split(':', 1)
+    return api.v2.api_item_render_dyed_png(plugin, item_id, color)
 
 @application.route('/minigame/achievements/winners.json')
 def api_achievement_winners():
     """Returns a list of Wurstmineberg IDs of all players who have completed all achievements, ordered chronologically by the time they got their last achievement. This list is emptied each time a new achievement is added to Minecraft."""
-    with open(os.path.join(config('logPath'), 'achievements.log')) as achievements_log:
+    with (api.util.CONFIG['logPath'] / 'achievements.log').open() as achievements_log:
         return json.dumps(list(line.strip() for line in achievements_log))
 
 @application.route('/minigame/diary/all.json')
 def api_diary():
-    """Returns all diary entries, sorted chronologically."""
-    ret = []
-    with open(os.path.join(config('jlogPath'), 'diary.jlog')) as diary_jlog:
-        for line in diary_jlog:
-            ret.append(json.loads(line))
-    return json.dumps(ret, sort_keys=True, indent=4)
+    """Returns all diary entries, sorted chronologically. Note: the diary feature has been removed, so this will return an empty array."""
+    return json.dumps([], sort_keys=True, indent=4)
 
 @application.route('/player/:player_id/info.json')
 def api_player_info(player_id):
-    """Returns the section of people.json that corresponds to the player. See http://wiki.wurstmineberg.de/People_file for more info."""
-    person_data = None
-    with open(config('peopleFile')) as people_json:
-        data = json.load(people_json)
-        if isinstance(data, dict):
-            data = data['people']
-        person_data = list(filter(lambda a: player_id == a['id'], data))[0]
+    """Returns the section of people.json that corresponds to the player. See http://wiki.wurstmineberg.de/People_file/Version_2 for more info."""
+    people_data = people.get_people_db().obj_dump(version=2)['people']
+    person_data = list(filter(lambda a: player_id == a['id'], people_data))[0]
+    if 'gravatar' in person_data:
+        del person_data['gravatar']
     return person_data
 
 @application.route('/player/people.json')
 def api_player_people():
-    """Returns the whole people.json file. See http://wiki.wurstmineberg.de/People_file for more info."""
+    """Returns the whole people.json file. See http://wiki.wurstmineberg.de/People_file/Version_2 for more info."""
     import people
     db = people.get_people_db().obj_dump(version=2)
     for person in db['people']:
@@ -282,8 +227,8 @@ def api_player_people():
 @application.route('/player/:player_minecraft_name/playerdata.json')
 def api_player_data(player_minecraft_name):
     """Returns the player data encoded as JSON, also accepts the player id instead of the Minecraft name"""
-    nbtfile = os.path.join(config('serverDir'), config('worldName'), 'players', player_minecraft_name + '.dat')
-    if not os.path.exists(nbtfile):
+    nbt_file = minecraft.World().world_path / 'players' / (player_minecraft_name + '.dat')
+    if not nbt_file.exists():
         for whitelist_entry in json.loads(api_whitelist()):
             if whitelist_entry['name'] == player_minecraft_name:
                 uuid = whitelist_entry['uuid']
@@ -292,8 +237,8 @@ def api_player_data(player_minecraft_name):
             uuid = api_player_info(player_minecraft_name)['minecraftUUID']
         if '-' not in uuid:
             uuid = uuid[:8] + '-' + uuid[8:12] + '-' + uuid[12:16] + '-' + uuid[16:20] + '-' + uuid[20:]
-        nbtfile = os.path.join(config('serverDir'), config('worldName'), 'playerdata', uuid + '.dat')
-    return nbtfile_to_dict(nbtfile)
+        nbt_file = minecraft.World().world_path / 'playerdata' / (uuid + '.dat')
+    return nbtfile_to_dict(nbt_file)
 
 @application.route('/player/:player_id/stats-grouped.json')
 def api_player_stats_grouped(player_id):
@@ -317,8 +262,8 @@ def api_stats(player_minecraft_name):
         player_minecraft_name = api_player_info(player_minecraft_name)['minecraft']
     except:
         pass # no such person or already correct
-    stats_file = os.path.join(config('serverDir'), config('worldName'), 'stats', player_minecraft_name + '.json')
-    if not os.path.exists(stats_file):
+    stats_file = minecraft.World().world_path / 'stats' / (player_minecraft_name + '.json')
+    if not stats_file.exists():
         for whitelist_entry in json.loads(api_whitelist()):
             if whitelist_entry['name'] == player_minecraft_name:
                 uuid = whitelist_entry['uuid']
@@ -327,8 +272,8 @@ def api_stats(player_minecraft_name):
             uuid = api_player_info(player_minecraft_name)['minecraftUUID']
         if '-' not in uuid:
             uuid = uuid[:8] + '-' + uuid[8:12] + '-' + uuid[12:16] + '-' + uuid[16:20] + '-' + uuid[20:]
-        stats_file = os.path.join(config('serverDir'), config('worldName'), 'stats', uuid + '.json')
-    with open(stats_file) as stats:
+        stats_file = minecraft.World().world_path / 'stats' / (uuid + '.json')
+    with stats_file.open() as stats:
         return json.load(stats)
 
 @application.route('/server/deaths/latest.json')

@@ -41,12 +41,6 @@ def parse_version_string():
 
 __version__ = str(parse_version_string())
 
-try:
-    import uwsgi
-    CONFIG_PATH = pathlib.Path(uwsgi.opt['config_path'])
-except:
-    CONFIG_PATH = pathlib.Path('/opt/wurstmineberg/config/api.json')
-
 DOCUMENTATION_INTRO = """
 <!DOCTYPE html>
 <h1>Wurstmineberg API v2</h1>
@@ -55,26 +49,6 @@ DOCUMENTATION_INTRO = """
 """.format(__version__)
 
 application = api.util.Bottle()
-
-def config():
-    try:
-        with CONFIG_PATH.open() as config_file:
-            loaded_config = json.load(config_file)
-    except:
-        loaded_config = {}
-    result = {
-        'isDev': loaded_config.get('isDev', False)
-    }
-    result['host'] = loaded_config.get('host', 'dev.wurstmineberg.de' if result['isDev'] else 'wurstmineberg.de')
-    result['cache'] = pathlib.Path(loaded_config.get('cache', '/opt/wurstmineberg/dev-api-cache' if result['isDev'] else '/opt/wurstmineberg/api-cache'))
-    result['jlogPath'] = pathlib.Path(loaded_config.get('jlogPath', '/opt/wurstmineberg/jlog'))
-    result['logPath'] = pathlib.Path(loaded_config.get('logPath', '/opt/wurstmineberg/log'))
-    result['moneysFile'] = pathlib.Path(loaded_config.get('moneysFile', '/opt/wurstmineberg/moneys/moneys.json'))
-    result['worldsDir'] = pathlib.Path(loaded_config.get('worldsDir', '/opt/wurstmineberg/world'))
-    result['webAssets'] = pathlib.Path(loaded_config.get('webAssets', '/opt/git/github.com/wurstmineberg/assets.wurstmineberg.de/branch/dev' if result['isDev'] else '/opt/git/github.com/wurstmineberg/assets.wurstmineberg.de/master'))
-    return result
-
-CONFIG = config()
 
 @application.route('/')
 def show_index():
@@ -86,21 +60,21 @@ def show_index():
         if route.rule == '/':
             yield '\n<tr><td style="white-space: nowrap; font-weight: bold;">/v2/</td><td>This documentation page for version 2 of the API.</td></tr>'
         elif '<' in route.rule:
-            yield '\n<tr><td style="white-space: nowrap;">/v2' + xml.sax.saxutils.escape(route.rule) + '</td><td>' + route.callback.__doc__.format(host=CONFIG['host']) + '</td></tr>'
+            yield '\n<tr><td style="white-space: nowrap;">/v2' + xml.sax.saxutils.escape(route.rule) + '</td><td>' + route.callback.__doc__.format(host=api.util.CONFIG['host']) + '</td></tr>'
         else:
-            yield '\n<tr><td style="white-space: nowrap;"><a href="/v2' + route.rule + '">/v2' + route.rule + '</a></td><td>' + route.callback.__doc__.format(host=CONFIG['host']) + '</td></tr>'
+            yield '\n<tr><td style="white-space: nowrap;"><a href="/v2' + route.rule + '">/v2' + route.rule + '</a></td><td>' + route.callback.__doc__.format(host=api.util.CONFIG['host']) + '</td></tr>'
     yield '</tbody></table>'
 
 @application.route('/meta/moneys.json')
 def api_moneys():
     """Returns the moneys.json file."""
-    with CONFIG['moneysFile'].open() as moneys_json:
+    with api.util.CONFIG['moneysFile'].open() as moneys_json:
         return json.load(moneys_json)
 
 @application.route('/minecraft/items/all.json')
 def api_all_items():
     """Returns the item info JSON file (<a href="http://assets.{host}/json/items.json.description.txt">documentation</a>)"""
-    with (CONFIG['webAssets'] / 'json' / 'items.json').open() as items_file:
+    with (api.util.CONFIG['webAssets'] / 'json' / 'items.json').open() as items_file:
         return json.load(items_file)
 
 @application.route('/minecraft/items/by-damage/<plugin>/<item_id>/<item_damage>.json')
@@ -163,8 +137,8 @@ def api_item_render_dyed_png(plugin, item_id, color):
     else:
         color_string = color
     color = int(color_string[:2], 16), int(color_string[2:4], 16), int(color_string[4:6], 16)
-    if CONFIG['cache'].exists():
-        image_path = CONFIG['cache'] / 'dyed-items' / plugin / item_id / (color_string + '.png')
+    if api.util.CONFIG['cache'].exists():
+        image_path = api.util.CONFIG['cache'] / 'dyed-items' / plugin / item_id / (color_string + '.png')
         if image_path.exists(): #TODO check if base texture has changed
             # dyed item has already been rendered, use the cached image
             return bottle.static_file(image_path.name, str(image_path.parent), mimetype='image/png')
@@ -175,7 +149,7 @@ def api_item_render_dyed_png(plugin, item_id, color):
     else:
         image_file = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
         image_path = pathlib.Path(image_file.name)
-    image = PIL.Image.open(CONFIG['webAssets'] / 'img' / 'grid-base' / item['image']) #TODO remove str cast, requires a feature from the next Pillow release after 2.9.0
+    image = PIL.Image.open(api.util.CONFIG['webAssets'] / 'img' / 'grid-base' / item['image']) #TODO remove str cast, requires a feature from the next Pillow release after 2.9.0
     image = PIL.ImageChops.multiply(image, PIL.Image.new('RGBA', image.size, color=color + (255,)))
     image.save(image_file, 'PNG')
     image_file.close()
@@ -194,7 +168,7 @@ def api_achievement_winners(world):
 @application.route('/minigame/deathgames/log.json')
 def api_death_games_log():
     """Returns the <a href="http://wiki.{host}/Death_Games">Death Games</a> log, listing attempts in chronological order."""
-    with (CONFIG['logPath'] / 'deathgames.json').open() as death_games_logfile:
+    with (api.util.CONFIG['logPath'] / 'deathgames.json').open() as death_games_logfile:
         return json.load(death_games_logfile)
 
 @application.route('/people.json')
@@ -224,7 +198,7 @@ def api_chunk_column_overworld(world, x, z):
     world = minecraft.World(world)
     x = int(x)
     z = int(z)
-    region = anvil.Region(world.path / world.name / 'region' / 'r.{}.{}.mca'.format(x // 32, z // 32))
+    region = anvil.Region(world.world_path / 'region' / 'r.{}.{}.mca'.format(x // 32, z // 32))
     chunk_column = region.chunk_column(x, z)
     return api.util2.nbt_to_dict(chunk_column.data)
 
@@ -248,9 +222,9 @@ def api_chunk_info_overworld(world, x, y, z):
             break
     else:
         section = None
-    with (CONFIG['webAssets'] / 'json' / 'biomes.json').open() as biomes_file:
+    with (api.util.CONFIG['webAssets'] / 'json' / 'biomes.json').open() as biomes_file:
         biomes = json.load(biomes_file)
-    with (CONFIG['webAssets'] / 'json' / 'items.json').open() as items_file:
+    with (api.util.CONFIG['webAssets'] / 'json' / 'items.json').open() as items_file:
         items = json.load(items_file)
     layers = []
     for layer in range(16):
@@ -320,7 +294,7 @@ def api_latest_deaths(world): #TODO multiworld
         if 'minecraft' in person: #TODO fix for v3 format
             people_ids[person['minecraft']] = wmb_id
     deaths = {}
-    with (CONFIG['logPath'] / 'deaths.log').open() as deaths_log: #TODO parse world log
+    with (api.util.CONFIG['logPath'] / 'deaths.log').open() as deaths_log: #TODO parse world log
         for line in deaths_log:
             match = re.match('([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([^@ ]+) (.*)', line)
             if match and match.group(2) in people_ids:
@@ -343,7 +317,7 @@ def api_deaths(world): #TODO multiworld
         if 'minecraft' in person: #TODO fix for v3 format
             people_ids[person['minecraft']] = wmb_id
     deaths = collections.defaultdict(list)
-    with (CONFIG['logPath'] / 'deaths.log').open() as deaths_log: #TODO parse world log
+    with (api.util.CONFIG['logPath'] / 'deaths.log').open() as deaths_log: #TODO parse world log
         for line in deaths_log:
             match = re.match('([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([^@ ]+) (.*)', line)
             if match and match.group(2) in people_ids:
@@ -364,7 +338,7 @@ def api_level(world):
 def api_map_by_id(world, identifier):
     """Returns info about the map item with damage value &lt;identifier&gt;, see <a href="http://minecraft.gamepedia.com/Map_Item_Format">Map Item Format</a> for documentation"""
     world = minecraft.World(world)
-    nbt_file = world.path / world.name / 'data' / 'map_{}.dat'.format(identifier)
+    nbt_file = world.world_path / 'data' / 'map_{}.dat'.format(identifier)
     return api.util2.nbtfile_to_dict(nbt_file)
 
 @application.route('/world/<world>/maps/overview.json')
@@ -385,7 +359,7 @@ def api_maps_index(world): #TODO add multiworld support
 @application.route('/world/<world>/maps/render/<identifier>.png')
 def api_map_render_png(world, identifier): #TODO multiworld
     """Returns the map item with damage value &lt;identifier&gt;, rendered as a PNG image file."""
-    if CONFIG['cache'].exists():
+    if api.util.CONFIG['cache'].exists():
         map_dir = os.path.join(config('cache'), 'map-renders') #TODO pathlib
         map_name = str(identifier) + '.png'
         map_path = os.path.join(map_dir, map_name)
@@ -724,7 +698,7 @@ def api_short_world_status(world):
     import people
 
     world = minecraft.World(world)
-    server = mcstatus.MinecraftServer.lookup(CONFIG['host'] if world.is_main else '{}.{}'.format(world, CONFIG['host']))
+    server = mcstatus.MinecraftServer.lookup(api.util.CONFIG['host'] if world.is_main else '{}.{}'.format(world, api.util.CONFIG['host']))
     try:
         status = server.status()
     except ConnectionRefusedError:
@@ -753,21 +727,21 @@ def api_short_world_status(world):
 def api_villages_end(world):
     """Returns the villages.dat in the End, encoded as JSON"""
     world = minecraft.World(world)
-    nbt_file = world.path / world.name / 'data' / 'villages_end.dat'
+    nbt_file = world.world_path / 'data' / 'villages_end.dat'
     return api.util2.nbtfile_to_dict(nbt_file)
 
 @application.route('/world/<world>/villages/nether.json')
 def api_villages_nether(world):
     """Returns the villages.dat in the Nether, encoded as JSON"""
     world = minecraft.World(world)
-    nbt_file = world.path / world.name / 'data' / 'villages_nether.dat'
+    nbt_file = world.world_path / 'data' / 'villages_nether.dat'
     return api.util2.nbtfile_to_dict(nbt_file)
 
 @application.route('/world/<world>/villages/overworld.json')
 def api_villages_overworld(world):
     """Returns the villages.dat in the Overworld, encoded as JSON"""
     world = minecraft.World(world)
-    nbt_file = world.path / world.name / 'data' / 'villages.dat'
+    nbt_file = world.world_path / 'data' / 'villages.dat'
     return api.util2.nbtfile_to_dict(nbt_file)
 
 @application.route('/world/<world>/whitelist.json')

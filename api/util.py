@@ -1,5 +1,30 @@
 import bottle
 
+try:
+    import uwsgi
+    CONFIG_PATH = pathlib.Path(uwsgi.opt['config_path'])
+except:
+    CONFIG_PATH = pathlib.Path('/opt/wurstmineberg/config/api.json')
+
+def config():
+    try:
+        with CONFIG_PATH.open() as config_file:
+            loaded_config = json.load(config_file)
+    except:
+        loaded_config = {}
+    result = {
+        'isDev': loaded_config.get('isDev', False)
+    }
+    result['cache'] = pathlib.Path(loaded_config.get('cache', '/opt/wurstmineberg/dev-api-cache' if result['isDev'] else '/opt/wurstmineberg/api-cache'))
+    result['host'] = loaded_config.get('host', 'dev.wurstmineberg.de' if result['isDev'] else 'wurstmineberg.de')
+    result['jlogPath'] = pathlib.Path(loaded_config.get('jlogPath', '/opt/wurstmineberg/jlog'))
+    result['logPath'] = pathlib.Path(loaded_config.get('logPath', '/opt/wurstmineberg/log'))
+    result['moneysFile'] = pathlib.Path(loaded_config.get('moneysFile', '/opt/wurstmineberg/moneys/moneys.json'))
+    result['webAssets'] = pathlib.Path(loaded_config.get('webAssets', '/opt/git/github.com/wurstmineberg/assets.wurstmineberg.de/branch/dev' if result['isDev'] else '/opt/git/github.com/wurstmineberg/assets.wurstmineberg.de/master'))
+    return result
+
+CONFIG = config()
+
 ERROR_PAGE_TEMPLATE = """
 %try:
     %from bottle import HTTP_CODES, request
