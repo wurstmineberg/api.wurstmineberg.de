@@ -208,6 +208,8 @@ def api_diary():
 @application.route('/player/:player_id/info.json')
 def api_player_info(player_id):
     """Returns the section of people.json that corresponds to the player. See http://wiki.wurstmineberg.de/People_file/Version_2 for more info."""
+    import people
+
     people_data = people.get_people_db().obj_dump(version=2)['people']
     person_data = list(filter(lambda a: player_id == a['id'], people_data))[0]
     if 'gravatar' in person_data:
