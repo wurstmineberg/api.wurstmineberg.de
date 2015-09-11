@@ -291,7 +291,7 @@ def api_latest_deaths():
         if 'id' in person and 'minecraft' in person:
             people_ids[person['minecraft']] = person['id']
     deaths = {}
-    with (CONFIG['logPath'] / 'deaths.log').open() as deaths_log:
+    with (api.util.CONFIG['logPath'] / 'deaths.log').open() as deaths_log:
         for line in deaths_log:
             match = re.match('([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([^@ ]+) (.*)', line)
             if match and match.group(2) in people_ids:
@@ -316,7 +316,7 @@ def api_deaths():
         if 'id' in person and 'minecraft' in person:
             people_ids[person['minecraft']] = person['id']
     deaths = collections.defaultdict(list)
-    with (CONFIG['logPath'] / 'deaths.log').open() as deaths_log:
+    with (api.util.CONFIG['logPath'] / 'deaths.log').open() as deaths_log:
         for line in deaths_log:
             match = re.match('([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([^@ ]+) (.*)', line)
             if match and match.group(2) in people_ids:
@@ -507,7 +507,7 @@ def api_sessions():
         'start': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) @start ([^ ]+)',
         'stop': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) @stop'
     }
-    with (CONFIG['logPath'] / 'logins.log').open() as logins_log:
+    with (api.util.CONFIG['logPath'] / 'logins.log').open() as logins_log:
         for log_line in logins_log:
             for match_type, match_string in matches.items():
                 match = re.match(match_string, log_line.strip('\n'))
@@ -578,7 +578,7 @@ def api_sessions_last_seen():
         'stop': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) @stop'
     }
     ret = {}
-    with (CONFIG['logPath'] / 'logins.log').open() as logins_log:
+    with (api.util.CONFIG['logPath'] / 'logins.log').open() as logins_log:
         for log_line in logins_log:
             for match_type, match_string in matches.items():
                 match = re.match(match_string, log_line.strip('\n'))
@@ -624,7 +624,7 @@ def api_short_server_status():
     """Returns JSON containing whether the server is online, the current Minecraft version, and the list of people who are online. Requires systemd-minecraft and mcstatus."""
     import mcstatus
 
-    server = mcstatus.MinecraftServer.lookup(CONFIG['host'])
+    server = mcstatus.MinecraftServer.lookup(api.util.CONFIG['host'])
     try:
         status = server.status()
     except ConnectionRefusedError:
@@ -678,5 +678,5 @@ def api_villages():
 @application.route('/moneys/moneys.json')
 def api_moneys():
     """Returns the moneys.json file."""
-    with CONFIG['moneysFile'].open() as moneys_json:
+    with api.util.CONFIG['moneysFile'].open() as moneys_json:
         return json.load(moneys_json)
