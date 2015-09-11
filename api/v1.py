@@ -12,6 +12,7 @@ import minecraft
 import nbt.nbt
 import os
 import os.path
+import pathlib
 import re
 import subprocess
 import tempfile
