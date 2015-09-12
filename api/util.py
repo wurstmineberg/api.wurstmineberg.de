@@ -3,7 +3,7 @@ import pathlib
 
 try:
     import uwsgi
-    CONFIG_PATH = pathlib.Path(uwsgi.opt['config_path'])
+    CONFIG_PATH = pathlib.Path(uwsgi.opt['config_path'].decode('utf-8') if isinstance(uwsgi.opt['config_path'], bytes) else uwsgi.opt['config_path'])
 except:
     CONFIG_PATH = pathlib.Path('/opt/wurstmineberg/config/api.json')
 
