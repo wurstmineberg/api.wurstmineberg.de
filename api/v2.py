@@ -15,7 +15,6 @@ import os.path
 import pathlib
 import re
 import subprocess
-import tempfile
 import time
 import uuid
 import xml.sax.saxutils
@@ -128,32 +127,30 @@ def api_item_by_tag_variant(plugin, item_id, tag_value):
 @application.route('/minecraft/items/render/dyed-by-id/<plugin>/<item_id>/<color>.png')
 def api_item_render_dyed_png(plugin, item_id, color):
     """Returns a dyed item's base texture (color specified in hex rrggbb), rendered as a PNG image file."""
-    import PIL.Image
-    import PIL.ImageChops
-
-    item = api_item_by_id(plugin, item_id)
     if isinstance(color, int):
         color_string = format(color, 'x')
     else:
         color_string = color
-    color = int(color_string[:2], 16), int(color_string[2:4], 16), int(color_string[4:6], 16)
-    if api.util.CONFIG['cache'].exists():
-        image_path = api.util.CONFIG['cache'] / 'dyed-items' / plugin / item_id / (color_string + '.png')
-        if image_path.exists(): #TODO check if base texture has changed
-            # dyed item has already been rendered, use the cached image
-            return bottle.static_file(image_path.name, str(image_path.parent), mimetype='image/png')
-        else:
-            if not image_path.parent.exists():
-                image_path.parent.mkdir(parents=True)
-            image_file = image_path.open('wb')
-    else:
-        image_file = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
-        image_path = pathlib.Path(image_file.name)
-    image = PIL.Image.open(api.util.CONFIG['webAssets'] / 'img' / 'grid-base' / item['image']) #TODO remove str cast, requires a feature from the next Pillow release after 2.9.0
-    image = PIL.ImageChops.multiply(image, PIL.Image.new('RGBA', image.size, color=color + (255,)))
-    image.save(image_file, 'PNG')
-    image_file.close()
-    return bottle.static_file(image_path.name, str(image_path.parent), mimetype='image/png')
+
+    cache_path = 'dyed-items/{plugin}/{item_id}/{color_string}.png'.format(plugin=plugin, item_id=item_id, color_string=color_string)
+
+    def image_func():
+        import PIL.Image
+        import PIL.ImageChops
+
+        item = api_item_by_id(plugin, item_id)
+        color = int(color_string[:2], 16), int(color_string[2:4], 16), int(color_string[4:6], 16)
+
+        image = PIL.Image.open(api.util.CONFIG['webAssets'] / 'img' / 'grid-base' / item['image']) #TODO remove str cast, requires a feature from the next Pillow release after 2.9.0
+        image = PIL.ImageChops.multiply(image, PIL.Image.new('RGBA', image.size, color=color + (255,)))
+        return image
+
+    def cache_check(image_path):
+        if not image_path.exists():
+            return False
+        return True #TODO check if base texture has changed
+
+    return api.util.cached_image(cache_path, image_func, cache_check)
 
 @application.route('/minigame/achievements/<world>/scoreboard.json')
 def api_achievement_scores(world):
@@ -175,6 +172,7 @@ def api_death_games_log():
 def api_player_people():
     """Returns the whole <a href="http://wiki.{host}/People_file/Version_3">people.json</a> file, except for the "gravatar" private field."""
     import people
+
     db = people.get_people_db().obj_dump(version=3)
     for person in db['people'].values():
         if 'gravatar' in person:
@@ -185,11 +183,31 @@ def api_player_people():
 def api_player_info(player_id):
     """Returns the section of <a href="http://wiki.{host}/People_file/Version_3">people.json</a> that corresponds to the player."""
     import people
-    db = people.get_people_db().obj_dump(version=3)
-    person = db['people'][player_id]
-    if 'gravatar' in person:
-        del person['gravatar']
-    return person
+
+    people_data = people.get_people_db().obj_dump(version=3)['people']
+    person_data = people_data[player_id] #TODO Minecraft UUID support
+    if 'gravatar' in person_data:
+        del person_data['gravatar']
+    return person_data
+
+@application.route('/player/<player_id>/skin/render/head/<size>.png')
+def api_skin_render_head_png(player_id, size):
+    """Returns a player skin's head (including the hat layer), as a &lt;size&gt;×&lt;size&gt;px PNG image file. Requires playerhead."""
+    size = int(size)
+    if size > 1024:
+        bottle.abort(403, 'Requested image size too large')
+
+    import people
+
+    people_data = people.get_people_db().obj_dump(version=3)['people']
+    person_data = people_data[player_id] #TODO Minecraft UUID support
+
+    def image_func():
+        import playerhead
+
+        return playerhead.head(person_data['minecraft']['nicks'][-1], profile_id=person_data['minecraft']['uuid']).resize((size, size))
+
+    return api.util.cached_image('skins/heads/{size}/{id}.png'.format(size), image_func, skin_cache_check)
 
 @application.route('/world/<world>/chunks/overworld/column/<x>/<z>.json')
 def api_chunk_column_overworld(world, x, z):
@@ -360,22 +378,18 @@ def api_maps_index(world):
 def api_map_render_png(world, identifier): #TODO multiworld
     """Returns the map item with damage value &lt;identifier&gt;, rendered as a PNG image file."""
     world = minecraft.World(world)
-    if api.util.CONFIG['cache'].exists():
-        map_path = api.util.CONFIG['cache'] / 'map-renders' / '{}.png'.format(identifier)
-        if map_path.exists() and map_path.stat().st_mtime > (world.world_path / 'data' / 'map_{}.dat'.format(identifier)).stat()/st_mtime + 60:
-            # map has been rendered over a minute after it was saved, use the cached map file
-            return bottle.static_file(map_path.name, str(map_path.parent), mimetype='image/png')
-        else:
-            if not map_path.parent.exists():
-                map_path.parent.mkdir(parents=True)
-            map_file = map_path.open('wb')
-    else:
-        map_file = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
-        map_path = pathlib.Path(map_file.name)
-    image = api.util.map_image(api_map_by_id(world.name, identifier))
-    image.save(map_file, 'PNG')
-    map_file.close()
-    return bottle.static_file(map_path.name, str(map_path.parent), mimetype='image/png')
+
+    def cache_check(image_path):
+        if not image_path.exists():
+            return False
+        if image_path.stat().st_mtime < (world.world_path / 'data' / 'map_{}.dat'.format(identifier)).stat()/st_mtime + 60:
+            return False
+        return True
+
+    def image_func():
+        return api.util.map_image(api_map_by_id(world.name, identifier))
+
+    return api.util.cached_image('map-renders/{}.png'.format(identifier))
 
 @application.route('/world/<world>/player/<player_id>/playerdata.json')
 def api_player_data(world, player_id):
