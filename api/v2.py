@@ -207,7 +207,7 @@ def api_skin_render_head_png(player_id, size):
 
         return playerhead.head(person_data['minecraft']['nicks'][-1], profile_id=person_data['minecraft']['uuid']).resize((size, size))
 
-    return api.util.cached_image('skins/heads/{}/{}.png'.format(size, player_id), image_func, skin_cache_check)
+    return api.util.cached_image('skins/heads/{}/{}.png'.format(size, player_id), image_func, api.util.skin_cache_check)
 
 @application.route('/world/<world>/chunks/overworld/column/<x>/<z>.json')
 def api_chunk_column_overworld(world, x, z):
