@@ -5,7 +5,6 @@ sys.path.append('/opt/py')
 import bottle
 import collections
 import contextlib
-from datetime import datetime
 import io
 import json
 import minecraft
