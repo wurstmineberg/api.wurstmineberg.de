@@ -14,6 +14,7 @@ Requirements
 *   [mcstatus](https://github.com/Dinnerbone/mcstatus) (required for world status endpoints only)
 *   [nbt](https://pypi.python.org/pypi/NBT) 1.4
 *   [people](https://github.com/wurstmineberg/people)
+*   [playerhead](https://github.com/wurstmineberg/playerhead) (required for skin rendering endpoints only)
 *   [systemd-minecraft](https://github.com/wurstmineberg/systemd-minecraft)
 
 Configuration
