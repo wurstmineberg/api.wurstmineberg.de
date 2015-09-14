@@ -66,7 +66,8 @@ def show_index():
 @application.route('/meta/moneys.json')
 def api_moneys():
     """Returns the moneys.json file."""
-    with api.util.CONFIG['moneysFile'].open() as moneys_json:
+    CONFIG = api.util.config() #DEBUG
+    with CONFIG['moneysFile'].open() as moneys_json: #DEBUG
         return json.load(moneys_json)
 
 @application.route('/minecraft/items/all.json')

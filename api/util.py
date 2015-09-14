@@ -5,9 +5,10 @@ import tempfile
 
 try:
     import uwsgi
-    CONFIG_PATH = pathlib.Path(uwsgi.opt['config_path'].decode('utf-8') if isinstance(uwsgi.opt['config_path'], bytes) else uwsgi.opt['config_path'])
 except:
     CONFIG_PATH = pathlib.Path('/opt/wurstmineberg/config/api.json')
+else:
+    CONFIG_PATH = pathlib.Path(uwsgi.opt['config_path'].decode('utf-8') if isinstance(uwsgi.opt['config_path'], bytes) else uwsgi.opt['config_path'])
 
 def config():
     try:
@@ -26,7 +27,7 @@ def config():
     result['webAssets'] = pathlib.Path(loaded_config.get('webAssets', '/opt/git/github.com/wurstmineberg/assets.wurstmineberg.de/branch/dev' if result['isDev'] else '/opt/git/github.com/wurstmineberg/assets.wurstmineberg.de/master'))
     return result
 
-CONFIG = config()
+#CONFIG = config() #DEBUG
 
 ERROR_PAGE_TEMPLATE = """
 %try:
