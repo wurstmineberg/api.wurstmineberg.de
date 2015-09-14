@@ -204,7 +204,7 @@ def api_skin_render_head_png(player_id, size):
     def image_func():
         import playerhead
 
-        return playerhead.head(person_data['minecraft']['nicks'][-1], profile_id=person_data['minecraft']['uuid']).resize((size, size))
+        return playerhead.head(person_data['minecraft']['nicks'][-1], profile_id=uuid.UUID(person_data['minecraft']['uuid'])).resize((size, size))
 
     return api.util.cached_image('skins/heads/{}/{}.png'.format(size, player_id), image_func, api.util.skin_cache_check)
 
