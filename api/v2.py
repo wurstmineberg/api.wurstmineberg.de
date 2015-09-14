@@ -63,11 +63,15 @@ def show_index():
             yield '\n<tr><td style="white-space: nowrap;"><a href="/v2' + route.rule + '">/v2' + route.rule + '</a></td><td>' + route.callback.__doc__.format(host=api.util.CONFIG['host']) + '</td></tr>'
     yield '</tbody></table>'
 
+@application.route('/meta/config/api.json')
+def api_api_config():
+    """Returns the API configuration, for debugging purposes."""
+    return api.util.CONFIG
+
 @application.route('/meta/moneys.json')
 def api_moneys():
     """Returns the moneys.json file."""
-    CONFIG = api.util.config() #DEBUG
-    with CONFIG['moneysFile'].open() as moneys_json: #DEBUG
+    with api.util.CONFIG['moneysFile'].open() as moneys_json:
         return json.load(moneys_json)
 
 @application.route('/minecraft/items/all.json')

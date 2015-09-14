@@ -27,7 +27,7 @@ def config():
     result['webAssets'] = pathlib.Path(loaded_config.get('webAssets', '/opt/git/github.com/wurstmineberg/assets.wurstmineberg.de/branch/dev' if result['isDev'] else '/opt/git/github.com/wurstmineberg/assets.wurstmineberg.de/master'))
     return result
 
-#CONFIG = config() #DEBUG
+CONFIG = config()
 
 ERROR_PAGE_TEMPLATE = """
 %try:
