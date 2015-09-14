@@ -67,7 +67,7 @@ def show_index():
 def api_api_config():
     """Returns the API configuration, for debugging purposes."""
     result = {key: (str(value) if isinstance(value, pathlib.Path) else value) for key, value in api.util.CONFIG.items()}
-    result['configPath'] = api.util.CONFIG_PATH
+    result['configPath'] = str(api.util.CONFIG_PATH)
     return result
 
 @application.route('/meta/moneys.json')
