@@ -2,6 +2,7 @@ import bottle
 import datetime
 import json
 import pathlib
+import random
 import tempfile
 
 try:
@@ -155,6 +156,7 @@ def cached_image(cache_path, image_func, cache_check):
 def skin_cache_check(image_path):
     if not image_path.exists():
         return False # image has not been rendered yet
-    if datetime.datetime.utcfromtimestamp(image_path.stat().st_mtime) < datetime.datetime.utcnow() - datetime.timedelta(minutes=5):
-        return False # image has not been rendered in the last 5 minutes
+    max_age = datetime.timedelta(hours=random.randrange(4, 8), minutes=random.randrange(0, 60)) # use a random value between 4 and 8 hours for the cache expiration check
+    if datetime.datetime.utcfromtimestamp(image_path.stat().st_mtime) < datetime.datetime.utcnow() - max_age:
+        return False # image is older than max_age
     return True
