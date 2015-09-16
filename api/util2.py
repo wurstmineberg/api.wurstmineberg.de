@@ -61,7 +61,7 @@ class Player:
                     else:
                         self.data = {
                             'minecraft': {
-                                'uuid': self.uuid,
+                                'uuid': str(self.uuid),
                                 'nicks': [name_info['name'] for name_info in names_response.json()]
                             }
                         }
