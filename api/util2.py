@@ -55,13 +55,16 @@ class Player:
                             self.data['minecraft']['uuid'] = str(self.uuid) # make sure the UUID is included in the JSON data
                             break
                 else:
-                    names = requests.get('https://api.mojang.com/user/profiles/{}/names'.format(self.uuid)).json()
-                    self.data = {
-                        'minecraft': {
-                            'uuid': self.uuid,
-                            'nicks': [name_info.name for name_info in names]
+                    names_response = requests.get('https://api.mojang.com/user/profiles/{}/names'.format(self.uuid.hex))
+                    if names_response.status_code == 204:
+                        profile = requests.get()
+                    else:
+                        self.data = {
+                            'minecraft': {
+                                'uuid': self.uuid,
+                                'nicks': [name_info.name for name_info in names_response.json()]
+                            }
                         }
-                    }
         if self.uuid is None and 'minecraft' in self.data:
             if 'uuid' in self.data['minecraft']:
                 self.uuid = uuid.UUID(self.data['minecraft']['uuid'])
