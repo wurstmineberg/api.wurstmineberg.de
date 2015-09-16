@@ -692,7 +692,7 @@ def api_world_status(world: minecraft.World):
     import people
 
     result = api.util2.short_world_status(world)
-    server = mcstatus.MinecraftServer.lookup(api.util.CONFIG['host'] if world.is_main else '{}.{}'.format(world, api.util.CONFIG['host']))
+    server = mcstatus.MinecraftServer.lookup(api.util.CONFIG['worldHost'] if world.is_main else '{}.{}'.format(world, api.util.CONFIG['worldHost']))
     try:
         status = server.status()
     except ConnectionRefusedError:

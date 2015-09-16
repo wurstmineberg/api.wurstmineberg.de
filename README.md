@@ -37,6 +37,7 @@ You can provide a configuration file in `/opt/wurstmineberg/config/api.json` to 
     "jlogPath": "/opt/wurstmineberg/jlog",
     "logPath": "/opt/wurstmineberg/log",
     "moneysFile": "/opt/wurstmineberg/moneys/moneys.json",
-    "webAssets": "/opt/git/github.com/wurstmineberg/assets.wurstmineberg.de/master"
+    "webAssets": "/opt/git/github.com/wurstmineberg/assets.wurstmineberg.de/master",
+    "worldHost": "wurstmineberg.de"
 }
 ```

@@ -23,6 +23,7 @@ def config():
     result['logPath'] = pathlib.Path(loaded_config.get('logPath', '/opt/wurstmineberg/log'))
     result['moneysFile'] = pathlib.Path(loaded_config.get('moneysFile', '/opt/wurstmineberg/moneys/moneys.json'))
     result['webAssets'] = pathlib.Path(loaded_config.get('webAssets', '/opt/git/github.com/wurstmineberg/assets.wurstmineberg.de/branch/dev' if result['isDev'] else '/opt/git/github.com/wurstmineberg/assets.wurstmineberg.de/master'))
+    result['worldHost'] = loaded_config.get('worldHost', loaded_config.get('host', 'wurstmineberg.de'))
     return result
 
 CONFIG = config()
