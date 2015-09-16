@@ -9,8 +9,57 @@ import nbt.nbt
 import os.path
 import pathlib
 import random
+import re
+import requests
 import time
 import tempfile
+import uuid
+
+class Player:
+    def __init__(self, player_id):
+        if re.match('[a-z][0-9a-z]{1,15}', player_id):
+            import people
+
+            self.wurstmineberg_id = player_id
+            self.data = people.get_people_db().obj_dump(version=3)['people'][self.wurstmineberg_id]
+            self.uuid = None
+        elif isinstance(player_id, uuid.UUID):
+            self.uuid = player_id
+            self.wurstmineberg_id = None
+        else:
+            try:
+                self.uuid = uuid.UUID(player_id)
+                self.wurstmineberg_id = None
+            except Exception as e:
+                raise ValueError('Invalid player ID: {}'.format(player_id)) from e
+        if self.wurstmineberg_id is None:
+            try:
+                import people
+            except ImportError:
+                self.data = None
+            else:
+                db = people.get_people_db()
+                for wurstmineberg_id, person_data in db.obj_dump(version=3)['people'].items():
+                    if 'minecraft' in person_data:
+                        if 'uuid' in person_data['minecraft']:
+                            person_uuid = uuid.UUID(person_data['minecraft']['uuid'])
+                        elif len(person_data['minecraft'].get('nicks', [])) > 0: # Minecraft UUID missing but Minecraft nick(s) present
+                            person_uuid = uuid.UUID(requests.get('https://api.mojang.com/users/profiles/minecraft/{}'.format(person_data['minecraft']['nicks'][-1])).json()['id']) # get UUID from Mojang
+                            db.person_set_key(wurstmineberg_id, 'minecraft.uuid', str(person_uuid)) # write back to people database
+                        else:
+                            continue
+                        if person_uuid == self.uuid:
+                            self.wurstmineberg_id = wurstmineberg_id
+                            self.data = person_data
+                            break
+                else:
+                    self.data = None
+        if self.uuid is None and 'minecraft' in self.data:
+            if 'uuid' in self.data['minecraft']:
+                self.uuid = uuid.UUID(self.data['minecraft']['uuid'])
+            elif len(self.data['minecraft'].get('nicks', [])) > 0: # Minecraft UUID missing but Minecraft nick(s) present
+                self.uuid = uuid.UUID(requests.get('https://api.mojang.com/users/profiles/minecraft/{}'.format(self.data['minecraft']['nicks'][-1])).json()['id']) # get UUID from Mojang
+                db.person_set_key(self.wurstmineberg_id, 'minecraft.uuid', str(self.uuid)) # write back to people database
 
 def all_players(): #TODO change to use Wurstmineberg/Minecraft IDs
     """Returns all known player IDs (Wurstmineberg IDs and Minecraft UUIDs)"""
@@ -120,6 +169,8 @@ def decode_args(f):
                 raise ValueError('The decode_args function only works for POSITIONAL_OR_KEYWORD parameters, but a {} parameter was found'.format(param.kind))
             if param.annotation is inspect.Parameter.empty or not isinstance(arg, str): # no annotation or a direct function call
                 decoded_args[param.name] = arg
+            elif param.annotation is Player:
+                decoded_args[param.name] = Player(arg)
             elif param.annotation is int:
                 decoded_args[param.name] = int(arg)
             elif param.annotation is minecraft.World:

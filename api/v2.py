@@ -5,6 +5,7 @@ sys.path.append('/opt/py')
 import bottle
 import collections
 import contextlib
+import hashlib
 import io
 import json
 import minecraft
@@ -174,41 +175,35 @@ def api_death_games_log():
 
 @api.util2.json_route(application, '/people')
 def api_player_people():
-    """Returns the whole <a href="http://wiki.{host}/People_file/Version_3">people.json</a> file, except for the "gravatar" private field."""
+    """Returns the whole <a href="http://wiki.{host}/People_file/Version_3">people.json</a> file, except for the "gravatar" private field, which is replaced by the gravatar URL."""
     import people
 
     db = people.get_people_db().obj_dump(version=3)
     for person in db['people'].values():
         if 'gravatar' in person:
+            person['gravatar'] = 'http://www.gravatar.com/avatar/{}'.format(hashlib.md5(person['gravatar'].encode('utf-8')).hexdigest())
             del person['gravatar']
     return db
 
-@api.util2.json_route(application, '/player/<player_id>/info')
-def api_player_info(player_id):
-    """Returns the section of <a href="http://wiki.{host}/People_file/Version_3">people.json</a> that corresponds to the player."""
-    import people
-
-    people_data = people.get_people_db().obj_dump(version=3)['people']
-    person_data = people_data[player_id] #TODO Minecraft UUID support
+@api.util2.json_route(application, '/player/<player>/info')
+@api.util2.decode_args
+def api_player_info(player: api.util2.Player):
+    """Returns the section of <a href="http://wiki.{host}/People_file/Version_3">people.json</a> that corresponds to the player, except for the "gravatar" private field, which is replaced by the gravatar URL."""
+    person_data = player.data
     if 'gravatar' in person_data:
-        del person_data['gravatar']
+        person_data['gravatar'] = 'http://www.gravatar.com/avatar/{}'.format(hashlib.md5(person_data['gravatar'].encode('utf-8')).hexdigest())
     return person_data
 
-@application.route('/player/<player_id>/skin/render/head/<size>.png')
+@application.route('/player/<player>/skin/render/head/<size>.png')
 @api.util2.decode_args
-def api_skin_render_head_png(player_id, size: range(1025)):
+def api_skin_render_head_png(player: api.util2.Player, size: range(1025)):
     """Returns a player skin's head (including the hat layer), as a &lt;size&gt;×&lt;size&gt;px PNG image file. Requires playerhead."""
-    import people
-
-    people_data = people.get_people_db().obj_dump(version=3)['people']
-    person_data = people_data[player_id] #TODO Minecraft UUID support
-
     def image_func():
         import playerhead
 
-        return playerhead.head(person_data['minecraft']['nicks'][-1], profile_id=uuid.UUID(person_data['minecraft']['uuid'])).resize((size, size))
+        return playerhead.head(player.data['minecraft']['nicks'][-1], profile_id=player.uuid).resize((size, size))
 
-    return api.util2.cached_image('skins/heads/{}/{}.png'.format(size, player_id), image_func, api.util2.skin_cache_check)
+    return api.util2.cached_image('skins/heads/{}/{}.png'.format(size, player.wurstmineberg_id), image_func, api.util2.skin_cache_check)
 
 @api.util2.json_route(application, '/world/<world>/chunks/overworld/column/<x>/<z>')
 @api.util2.decode_args
@@ -391,50 +386,24 @@ def api_map_render_png(world: minecraft.World, identifier: int): #TODO multiworl
 
     return api.util2.cached_image('map-renders/{}.png'.format(identifier))
 
-@api.util2.json_route(application, '/world/<world>/player/<player_id>/playerdata')
+@api.util2.json_route(application, '/world/<world>/player/<player>/playerdata')
 @api.util2.decode_args
-def api_player_data(world: minecraft.World, player_id):
+def api_player_data(world: minecraft.World, player: api.util2.Player):
     """Returns the <a href="http://minecraft.gamepedia.com/Player.dat_format">player data</a> encoded as JSON"""
-    pass #TODO get Minecraft UUID/name
-    nbtfile = os.path.join(config('serverDir'), config('worldName'), 'players', player_minecraft_name + '.dat') #TODO multiworld
-    if not os.path.exists(nbtfile):
-        for whitelist_entry in api_whitelist(): #TODO add support for non whitelisted players
-            if whitelist_entry['name'] == player_minecraft_name:
-                uuid = whitelist_entry['uuid']
-                break
-        else:
-            uuid = api_player_info(player_minecraft_name)['minecraftUUID']
-        if '-' not in uuid:
-            uuid = uuid[:8] + '-' + uuid[8:12] + '-' + uuid[12:16] + '-' + uuid[16:20] + '-' + uuid[20:]
-        nbtfile = os.path.join(config('serverDir'), config('worldName'), 'playerdata', uuid + '.dat') #TODO multiworld
-    return api.util2.nbtfile_to_dict(nbtfile)
+    nbt_file = world.world_path / 'playerdata' / '{}.dat'.format(player.uuid)
+    return api.util2.nbtfile_to_dict(nbt_file)
 
-@api.util2.json_route(application, '/world/<world>/player/<player_id>/stats')
+@api.util2.json_route(application, '/world/<world>/player/<player>/stats')
 @api.util2.decode_args
-def api_player_stats(world: minecraft.World, player_id):
+def api_player_stats(world: minecraft.World, player: api.util2.Player):
     """Returns the player's stats formatted as JSON with stats grouped into objects by category"""
 
-    def api_stats(player_minecraft_name): #TODO deprecate in favor of api_player_stats
-        """Returns the stats JSON file from the server, also accepts the player id instead of the Minecraft name"""
-        try:
-            player_minecraft_name = api_player_info(player_minecraft_name)['minecraft']
-        except:
-            pass # no such person or already correct
-        stats_file = os.path.join(config('serverDir'), config('worldName'), 'stats', player_minecraft_name + '.json') #TODO use systemd-minecraft world object
-        if not os.path.exists(stats_file):
-            for whitelist_entry in api_whitelist():
-                if whitelist_entry['name'] == player_minecraft_name:
-                    uuid = whitelist_entry['uuid']
-                    break
-            else:
-                uuid = api_player_info(player_minecraft_name)['minecraftUUID']
-            if '-' not in uuid:
-                uuid = uuid[:8] + '-' + uuid[8:12] + '-' + uuid[12:16] + '-' + uuid[16:20] + '-' + uuid[20:]
-            stats_file = os.path.join(config('serverDir'), config('worldName'), 'stats', uuid + '.json') #TODO use systemd-minecraft world object
-        with open(stats_file) as stats:
-            return json.load(stats)
-
-    stats = api_stats(player_id) #TODO deprecate that endpoint; multiworld
+    stats_path = world.world_path / 'stats' / '{}.json'.format(player.uuid)
+    if not stats_path.exists():
+        player_minecraft_name = player.data['minecraft']['nicks'][-1]
+        stats_path = world.world_path / 'stats' / '{}.json'.format(player_minecraft_name) #TODO use systemd-minecraft world object
+    with open(stats_path) as stats_file:
+        stats = json.load(stats_file)
     ret = {}
     for stat_name, value in stats.items():
         parent = ret
