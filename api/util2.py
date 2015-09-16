@@ -20,8 +20,9 @@ class Player:
         if re.match('[a-z][0-9a-z]{1,15}', player_id):
             import people
 
+            db = people.get_people_db()
             self.wurstmineberg_id = player_id
-            self.data = people.get_people_db().obj_dump(version=3)['people'][self.wurstmineberg_id]
+            self.data = db.obj_dump(version=3)['people'][self.wurstmineberg_id]
             self.uuid = None
         elif isinstance(player_id, uuid.UUID):
             self.uuid = player_id
