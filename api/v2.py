@@ -91,7 +91,7 @@ def api_item_by_damage(plugin, item_id, item_damage: int):
     if 'damageValues' not in ret:
         bottle.abort(404, '{} has no damage variants'.format(ret.get('name', 'Item')))
     if str(item_damage) not in ret['damageValues']:
-        bottle.abort(404, 'Item {} has no damage variant for damage value {}'.format(ret['stringID'], item_damage))
+        bottle.abort(404, 'Item {}:{} has no damage variant for damage value {}'.format(plugin, item_id, item_damage))
     ret.update(ret['damageValues'][str(item_damage)])
     del ret['damageValues']
     return ret
@@ -103,7 +103,7 @@ def api_item_by_effect(plugin, item_id, effect_plugin, effect_id):
     if 'effects' not in ret:
         bottle.abort(404, '{} has no effect variants'.format(ret.get('name', 'Item')))
     if effect_plugin not in ret['effects'] or effect_id not in ret['effects'][effect_plugin]:
-        bottle.abort(404, 'Item {} has no effect variant for {}:{}'.format(ret['stringID'], effect_plugin, effect_id))
+        bottle.abort(404, 'Item {}:{} has no effect variant for {}:{}'.format(plugin, item_id, effect_plugin, effect_id))
     ret.update(ret['effects'][effect_plugin][effect_id])
     del ret['effects']
     return ret
@@ -116,7 +116,6 @@ def api_item_by_id(plugin, item_id):
         ret = all_items[plugin][item_id]
     else:
         bottle.abort(404, 'No item with id {}:{}'.format(plugin, item_id))
-    ret['stringID'] = plugin + ':' + item_id
     return ret
 
 @api.util2.json_route(application, '/minecraft/items/by-tag/<plugin>/<item_id>/<tag_value>')
@@ -126,7 +125,7 @@ def api_item_by_tag_variant(plugin, item_id, tag_value):
     if 'tagPath' not in ret:
         bottle.abort(404, '{} has no tag variants'.format(ret.get('name', 'Item')))
     if str(tag_value) not in ret['tagVariants']:
-        bottle.abort(404, 'Item {} has no tag variant for tag value {}'.format(ret['stringID'], tag_value))
+        bottle.abort(404, 'Item {}:{} has no tag variant for tag value {}'.format(plugin, item_id, tag_value))
     ret.update(ret['tagVariants'][str(tag_value)])
     del ret['tagPath']
     del ret['tagVariants']
