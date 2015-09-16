@@ -469,7 +469,7 @@ def api_playerstats(world: minecraft.World): #TODO multiworld
 @api.util2.decode_args
 def api_playerstats_achievements(world: minecraft.World): #TODO multiworld
     """Returns all achievement stats in one file"""
-    alldata = api_playerstats()
+    alldata = api_playerstats(world)
     data = {}
     for player in alldata:
         playerdata = alldata[player]
@@ -486,7 +486,7 @@ def api_playerstats_achievements(world: minecraft.World): #TODO multiworld
 @api.util2.decode_args
 def api_playerstats_by_id(world: minecraft.World, identifier): #TODO multiworld
     """Returns the stat item &lt;identifier&gt; from all player stats"""
-    alldata = api_playerstats()
+    alldata = api_playerstats(world)
     data = {}
     for player in alldata:
         playerdata = alldata[player]
@@ -501,7 +501,7 @@ def api_playerstats_by_id(world: minecraft.World, identifier): #TODO multiworld
 @api.util2.decode_args
 def api_playerstats_entities(world: minecraft.World): #TODO multiworld
     """Returns all entity stats in one file"""
-    alldata = api_playerstats()
+    alldata = api_playerstats(world)
     data = {}
     entityActions = ['killEntity', 'entityKilledBy']
     for player in alldata:
@@ -519,7 +519,7 @@ def api_playerstats_entities(world: minecraft.World): #TODO multiworld
 @api.util2.decode_args
 def api_playerstats_general(world: minecraft.World): #TODO multiworld
     """Returns all general stats in one file"""
-    all_data = api_playerstats()
+    all_data = api_playerstats(world)
     data = {}
     for player, player_data in all_data.items():
         player_dict = {}
@@ -538,7 +538,7 @@ def api_playerstats_general(world: minecraft.World): #TODO multiworld
 @api.util2.decode_args
 def api_playerstats_items(world: minecraft.World): #TODO multiworld
     """Returns all item and block stats in one file"""
-    all_data = api_playerstats()
+    all_data = api_playerstats(world)
     data = {}
     item_actions = 'useItem', 'craftItem', 'breakItem', 'mineBlock', 'pickup', 'drop'
     for player, player_data in all_data.items():
