@@ -1,9 +1,6 @@
 import bottle
-import datetime
 import json
 import pathlib
-import random
-import tempfile
 
 try:
     import uwsgi
@@ -135,28 +132,3 @@ def map_image(map_dict):
         color = tuple(round(palette_color * [180, 220, 255, 135][color_variant] / 255) for palette_color in map_palette[base_color]) + (255,)
         ret.putpixel((x, y), color)
     return ret
-
-def cached_image(cache_path, image_func, cache_check):
-    if CONFIG['cache'].exists():
-        image_path = CONFIG['cache'] / cache_path
-        if cache_check(image_path):
-            return bottle.static_file(image_path.name, str(image_path.parent), mimetype='image/png')
-        else:
-            if not image_path.parent.exists():
-                image_path.parent.mkdir(parents=True)
-            image_file = image_path.open('wb')
-    else:
-        image_file = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
-        image_path = pathlib.Path(image_file.name)
-    image = image_func()
-    image.save(image_file, 'PNG')
-    image_file.close()
-    return bottle.static_file(image_path.name, str(image_path.parent), mimetype='image/png')
-
-def skin_cache_check(image_path):
-    if not image_path.exists():
-        return False # image has not been rendered yet
-    max_age = datetime.timedelta(hours=random.randrange(4, 8), minutes=random.randrange(0, 60)) # use a random value between 4 and 8 hours for the cache expiration check
-    if datetime.datetime.utcfromtimestamp(image_path.stat().st_mtime) < datetime.datetime.utcnow() - max_age:
-        return False # image is older than max_age
-    return True

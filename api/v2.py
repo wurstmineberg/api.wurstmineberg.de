@@ -63,27 +63,28 @@ def show_index():
             yield '\n<tr><td style="white-space: nowrap;"><a href="/v2' + route.rule + '">/v2' + route.rule + '</a></td><td>' + route.callback.__doc__.format(host=api.util.CONFIG['host']) + '</td></tr>'
     yield '</tbody></table>'
 
-@application.route('/meta/config/api.json')
+@api.util2.json_route(application, '/meta/config/api')
 def api_api_config():
     """Returns the API configuration, for debugging purposes."""
     result = {key: (str(value) if isinstance(value, pathlib.Path) else value) for key, value in api.util.CONFIG.items()}
     result['configPath'] = str(api.util.CONFIG_PATH)
     return result
 
-@application.route('/meta/moneys.json')
+@api.util2.json_route(application, '/meta/moneys')
 def api_moneys():
     """Returns the moneys.json file."""
     with api.util.CONFIG['moneysFile'].open() as moneys_json:
         return json.load(moneys_json)
 
-@application.route('/minecraft/items/all.json')
+@api.util2.json_route(application, '/minecraft/items/all')
 def api_all_items():
     """Returns the item info JSON file (<a href="http://assets.{host}/json/items.json.description.txt">documentation</a>)"""
     with (api.util.CONFIG['webAssets'] / 'json' / 'items.json').open() as items_file:
         return json.load(items_file)
 
-@application.route('/minecraft/items/by-damage/<plugin>/<item_id>/<item_damage>.json')
-def api_item_by_damage(plugin, item_id, item_damage):
+@api.util2.json_route(application, '/minecraft/items/by-damage/<plugin>/<item_id>/<item_damage>')
+@api.util2.decode_args
+def api_item_by_damage(plugin, item_id, item_damage: int):
     """Returns the item info for an item with the given text ID and numeric damage value."""
     ret = api_item_by_id(plugin, item_id)
     if 'damageValues' not in ret:
@@ -94,7 +95,7 @@ def api_item_by_damage(plugin, item_id, item_damage):
     del ret['damageValues']
     return ret
 
-@application.route('/minecraft/items/by-effect/<plugin>/<item_id>/<effect_plugin>/<effect_id>.json')
+@api.util2.json_route(application, '/minecraft/items/by-effect/<plugin>/<item_id>/<effect_plugin>/<effect_id>')
 def api_item_by_effect(plugin, item_id, effect_plugin, effect_id):
     """Returns the item info for an item with the given text ID, tagged with the given text effect ID."""
     ret = api_item_by_id(plugin, item_id)
@@ -106,7 +107,7 @@ def api_item_by_effect(plugin, item_id, effect_plugin, effect_id):
     del ret['effects']
     return ret
 
-@application.route('/minecraft/items/by-id/<plugin>/<item_id>.json')
+@api.util2.json_route(application, '/minecraft/items/by-id/<plugin>/<item_id>')
 def api_item_by_id(plugin, item_id):
     """Returns the item info for an item with the given text ID, including variant info."""
     all_items = api_all_items()
@@ -117,7 +118,7 @@ def api_item_by_id(plugin, item_id):
     ret['stringID'] = plugin + ':' + item_id
     return ret
 
-@application.route('/minecraft/items/by-tag/<plugin>/<item_id>/<tag_value>.json')
+@api.util2.json_route(application, '/minecraft/items/by-tag/<plugin>/<item_id>/<tag_value>')
 def api_item_by_tag_variant(plugin, item_id, tag_value):
     """Returns the item info for an item with the given text ID, tagged with the given tag variant for the tag path specified in items.json."""
     ret = api_item_by_id(plugin, item_id)
@@ -131,21 +132,16 @@ def api_item_by_tag_variant(plugin, item_id, tag_value):
     return ret
 
 @application.route('/minecraft/items/render/dyed-by-id/<plugin>/<item_id>/<color>.png')
-def api_item_render_dyed_png(plugin, item_id, color):
+@api.util2.decode_args
+def api_item_render_dyed_png(plugin, item_id, color: 'color'):
     """Returns a dyed item's base texture (color specified in hex rrggbb), rendered as a PNG image file."""
-    if isinstance(color, int):
-        color_string = format(color, 'x')
-    else:
-        color_string = color
-
-    cache_path = 'dyed-items/{plugin}/{item_id}/{color_string}.png'.format(plugin=plugin, item_id=item_id, color_string=color_string)
+    cache_path = 'dyed-items/{}/{}/{:02x}{:02x}{:02x}.png'.format(plugin, item_id, *color)
 
     def image_func():
         import PIL.Image
         import PIL.ImageChops
 
         item = api_item_by_id(plugin, item_id)
-        color = int(color_string[:2], 16), int(color_string[2:4], 16), int(color_string[4:6], 16)
 
         image = PIL.Image.open(api.util.CONFIG['webAssets'] / 'img' / 'grid-base' / item['image']) #TODO remove str cast, requires a feature from the next Pillow release after 2.9.0
         image = PIL.ImageChops.multiply(image, PIL.Image.new('RGBA', image.size, color=color + (255,)))
@@ -156,25 +152,27 @@ def api_item_render_dyed_png(plugin, item_id, color):
             return False
         return True #TODO check if base texture has changed
 
-    return api.util.cached_image(cache_path, image_func, cache_check)
+    return api.util2.cached_image(cache_path, image_func, cache_check)
 
-@application.route('/minigame/achievements/<world>/scoreboard.json')
-def api_achievement_scores(world):
+@api.util2.json_route(application, '/minigame/achievements/<world>/scoreboard')
+@api.util2.decode_args
+def api_achievement_scores(world: minecraft.World):
     """Returns an object mapping player's IDs to their current score in the achievement run."""
     raise NotImplementedError('achievement run endpoints NYI') #TODO (requires log parsing)
 
-@application.route('/minigame/achievements/<world>/winners.json')
-def api_achievement_winners(world):
+@api.util2.json_route(application, '/minigame/achievements/<world>/winners')
+@api.util2.decode_args
+def api_achievement_winners(world: minecraft.World):
     """Returns an array of IDs of all players who have completed all achievements, ordered chronologically by the time they got their last achievement. This list is emptied each time a new achievement is added to Minecraft."""
     raise NotImplementedError('achievement run endpoints NYI') #TODO (requires log parsing)
 
-@application.route('/minigame/deathgames/log.json')
+@api.util2.json_route(application, '/minigame/deathgames/log')
 def api_death_games_log():
     """Returns the <a href="http://wiki.{host}/Death_Games">Death Games</a> log, listing attempts in chronological order."""
     with (api.util.CONFIG['logPath'] / 'deathgames.json').open() as death_games_logfile:
         return json.load(death_games_logfile)
 
-@application.route('/people.json')
+@api.util2.json_route(application, '/people')
 def api_player_people():
     """Returns the whole <a href="http://wiki.{host}/People_file/Version_3">people.json</a> file, except for the "gravatar" private field."""
     import people
@@ -185,7 +183,7 @@ def api_player_people():
             del person['gravatar']
     return db
 
-@application.route('/player/<player_id>/info.json')
+@api.util2.json_route(application, '/player/<player_id>/info')
 def api_player_info(player_id):
     """Returns the section of <a href="http://wiki.{host}/People_file/Version_3">people.json</a> that corresponds to the player."""
     import people
@@ -197,12 +195,9 @@ def api_player_info(player_id):
     return person_data
 
 @application.route('/player/<player_id>/skin/render/head/<size>.png')
-def api_skin_render_head_png(player_id, size):
+@api.util2.decode_args
+def api_skin_render_head_png(player_id, size: range(1025)):
     """Returns a player skin's head (including the hat layer), as a &lt;size&gt;×&lt;size&gt;px PNG image file. Requires playerhead."""
-    size = int(size)
-    if size > 1024:
-        bottle.abort(403, 'Requested image size too large')
-
     import people
 
     people_data = people.get_people_db().obj_dump(version=3)['people']
@@ -213,21 +208,21 @@ def api_skin_render_head_png(player_id, size):
 
         return playerhead.head(person_data['minecraft']['nicks'][-1], profile_id=uuid.UUID(person_data['minecraft']['uuid'])).resize((size, size))
 
-    return api.util.cached_image('skins/heads/{}/{}.png'.format(size, player_id), image_func, api.util.skin_cache_check)
+    return api.util2.cached_image('skins/heads/{}/{}.png'.format(size, player_id), image_func, api.util2.skin_cache_check)
 
-@application.route('/world/<world>/chunks/overworld/column/<x>/<z>.json')
-def api_chunk_column_overworld(world, x, z):
+@api.util2.json_route(application, '/world/<world>/chunks/overworld/column/<x>/<z>')
+@api.util2.decode_args
+def api_chunk_column_overworld(world: minecraft.World, x: int, z: int):
     """Returns the given chunk column in JSON-encoded <a href="http://minecraft.gamepedia.com/Anvil_file_format">Anvil</a> NBT."""
     import anvil
-    world = minecraft.World(world)
-    x = int(x)
-    z = int(z)
+
     region = anvil.Region(world.world_path / 'region' / 'r.{}.{}.mca'.format(x // 32, z // 32))
     chunk_column = region.chunk_column(x, z)
     return api.util2.nbt_to_dict(chunk_column.data)
 
-@application.route('/world/<world>/chunks/overworld/chunk/<x>/<y>/<z>.json')
-def api_chunk_info_overworld(world, x, y, z):
+@api.util2.json_route(application, '/world/<world>/chunks/overworld/chunk/<x>/<y>/<z>')
+@api.util2.decode_args
+def api_chunk_info_overworld(world: minecraft.World, x: int, y: range(16), z: int):
     """Returns information about the given chunk section in JSON format. The nested arrays can be indexed in y-z-x order."""
 
     def nybble(data, idx):
@@ -237,9 +232,6 @@ def api_chunk_info_overworld(world, x, y, z):
         else:
             return result >> 4
 
-    x = int(x)
-    y = int(y)
-    z = int(z)
     column = api_chunk_column_overworld(world, x, z)
     for section in column['Level']['Sections']:
         if section['Y'] == y:
@@ -304,10 +296,11 @@ def api_chunk_info_overworld(world, x, y, z):
                     del block_info['tileEntity']
                 else:
                     block_info['tileEntity'] = tile_entity
-    return json.dumps(layers, sort_keys=True, indent=4)
+    return layers
 
-@application.route('/world/<world>/deaths/latest.json')
-def api_latest_deaths(world): #TODO multiworld
+@api.util2.json_route(application, '/world/<world>/deaths/latest')
+@api.util2.decode_args
+def api_latest_deaths(world: minecraft.World): #TODO multiworld
     """Returns JSON containing information about the most recent death of each player"""
     import people
 
@@ -332,8 +325,9 @@ def api_latest_deaths(world): #TODO multiworld
         'lastPerson': last_person
     }
 
-@application.route('/world/<world>/deaths/overview.json')
-def api_deaths(world): #TODO multiworld
+@api.util2.json_route(application, '/world/<world>/deaths/overview')
+@api.util2.decode_args
+def api_deaths(world: minecraft.World): #TODO multiworld
     """Returns JSON containing information about all recorded player deaths"""
     people_ids = {}
     people_data = people.get_people_db().obj_dump(version=3)['people']
@@ -352,23 +346,24 @@ def api_deaths(world): #TODO multiworld
                 })
     return deaths
 
-@application.route('/world/<world>/level.json')
-def api_level(world):
+@api.util2.json_route(application, '/world/<world>/level')
+@api.util2.decode_args
+def api_level(world: minecraft.World):
     """Returns the level.dat encoded as JSON"""
-    nbt_file = minecraft.World(world).path / world / 'level.dat'
+    nbt_file = world.world_path / 'level.dat'
     return api.util2.nbtfile_to_dict(nbt_file)
 
-@application.route('/world/<world>/maps/by-id/<identifier>.json')
-def api_map_by_id(world, identifier):
+@api.util2.json_route(application, '/world/<world>/maps/by-id/<identifier>')
+@api.util2.decode_args
+def api_map_by_id(world: minecraft.World, identifier: int):
     """Returns info about the map item with damage value &lt;identifier&gt;, see <a href="http://minecraft.gamepedia.com/Map_Item_Format">Map Item Format</a> for documentation"""
-    world = minecraft.World(world)
     nbt_file = world.world_path / 'data' / 'map_{}.dat'.format(identifier)
     return api.util2.nbtfile_to_dict(nbt_file)
 
-@application.route('/world/<world>/maps/overview.json')
-def api_maps_index(world):
+@api.util2.json_route(application, '/world/<world>/maps/overview')
+@api.util2.decode_args
+def api_maps_index(world: minecraft.World):
     """Returns a list of existing maps with all of their fields except for the actual colors."""
-    world = minecraft.World(world)
     ret = {}
     for map_file in (world.world_path / 'data').iterdir():
         match = re.match('map_([0-9]+).dat', map_file.name)
@@ -381,10 +376,9 @@ def api_maps_index(world):
     return ret
 
 @application.route('/world/<world>/maps/render/<identifier>.png')
-def api_map_render_png(world, identifier): #TODO multiworld
+@api.util2.decode_args
+def api_map_render_png(world: minecraft.World, identifier: int): #TODO multiworld
     """Returns the map item with damage value &lt;identifier&gt;, rendered as a PNG image file."""
-    world = minecraft.World(world)
-
     def cache_check(image_path):
         if not image_path.exists():
             return False
@@ -393,17 +387,18 @@ def api_map_render_png(world, identifier): #TODO multiworld
         return True
 
     def image_func():
-        return api.util.map_image(api_map_by_id(world.name, identifier))
+        return api.util.map_image(api_map_by_id(world, identifier))
 
-    return api.util.cached_image('map-renders/{}.png'.format(identifier))
+    return api.util2.cached_image('map-renders/{}.png'.format(identifier))
 
-@application.route('/world/<world>/player/<player_id>/playerdata.json')
-def api_player_data(world, player_id):
+@api.util2.json_route(application, '/world/<world>/player/<player_id>/playerdata')
+@api.util2.decode_args
+def api_player_data(world: minecraft.World, player_id):
     """Returns the <a href="http://minecraft.gamepedia.com/Player.dat_format">player data</a> encoded as JSON"""
     pass #TODO get Minecraft UUID/name
     nbtfile = os.path.join(config('serverDir'), config('worldName'), 'players', player_minecraft_name + '.dat') #TODO multiworld
     if not os.path.exists(nbtfile):
-        for whitelist_entry in json.loads(api_whitelist()): #TODO add support for non whitelisted players
+        for whitelist_entry in api_whitelist(): #TODO add support for non whitelisted players
             if whitelist_entry['name'] == player_minecraft_name:
                 uuid = whitelist_entry['uuid']
                 break
@@ -414,8 +409,9 @@ def api_player_data(world, player_id):
         nbtfile = os.path.join(config('serverDir'), config('worldName'), 'playerdata', uuid + '.dat') #TODO multiworld
     return api.util2.nbtfile_to_dict(nbtfile)
 
-@application.route('/world/<world>/player/<player_id>/stats.json')
-def api_player_stats(world, player_id):
+@api.util2.json_route(application, '/world/<world>/player/<player_id>/stats')
+@api.util2.decode_args
+def api_player_stats(world: minecraft.World, player_id):
     """Returns the player's stats formatted as JSON with stats grouped into objects by category"""
 
     def api_stats(player_minecraft_name): #TODO deprecate in favor of api_player_stats
@@ -426,7 +422,7 @@ def api_player_stats(world, player_id):
             pass # no such person or already correct
         stats_file = os.path.join(config('serverDir'), config('worldName'), 'stats', player_minecraft_name + '.json') #TODO use systemd-minecraft world object
         if not os.path.exists(stats_file):
-            for whitelist_entry in json.loads(api_whitelist()):
+            for whitelist_entry in api_whitelist():
                 if whitelist_entry['name'] == player_minecraft_name:
                     uuid = whitelist_entry['uuid']
                     break
@@ -450,18 +446,20 @@ def api_player_stats(world, player_id):
         parent[key_path[-1]] = value #TODO add support for summary stats (stat.drop)
     return ret
 
-@application.route('/world/<world>/playerdata/all.json')
-def api_player_data_all(world): #TODO multiworld
+@api.util2.json_route(application, '/world/<world>/playerdata/all')
+@api.util2.decode_args
+def api_player_data_all(world: minecraft.World): #TODO multiworld
     """Returns the player data of all known players, encoded as JSON"""
     nbtdicts = {}
-    for user in playernames():
+    for user in api.util2.all_players():
         with contextlib.suppress(FileNotFoundError):
             nbtdata = api_player_data(user)
         nbtdicts[user] = nbtdata
     return nbtdicts
 
-@application.route('/world/<world>/playerdata/by-id/<identifier>.json')
-def api_player_data_by_id(world, identifier): #TODO multiworld, player IDs
+@api.util2.json_route(application, '/world/<world>/playerdata/by-id/<identifier>')
+@api.util2.decode_args
+def api_player_data_by_id(world: minecraft.World, identifier): #TODO multiworld, player IDs
     """Returns a dictionary with player IDs as the keys, and their player data fields &lt;identifier&gt; as the values"""
     all_data = api_player_data_all()
     data = {}
@@ -472,8 +470,9 @@ def api_player_data_by_id(world, identifier): #TODO multiworld, player IDs
                 data[player] = playerdata[name]
     return data
 
-@application.route('/world/<world>/playerstats/all.json')
-def api_playerstats(world): #TODO multiworld
+@api.util2.json_route(application, '/world/<world>/playerstats/all')
+@api.util2.decode_args
+def api_playerstats(world: minecraft.World): #TODO multiworld
     """Returns all player stats in one file. This file can be potentially big. Please use one of the other endpoints if possible."""
     data = {}
     people = None
@@ -498,8 +497,9 @@ def api_playerstats(world): #TODO multiworld
                     data[name] = json.loads(playerfile.read())
     return data
 
-@application.route('/world/<world>/playerstats/achievement.json')
-def api_playerstats_achievements(world): #TODO multiworld
+@api.util2.json_route(application, '/world/<world>/playerstats/achievement')
+@api.util2.decode_args
+def api_playerstats_achievements(world: minecraft.World): #TODO multiworld
     """Returns all achievement stats in one file"""
     alldata = api_playerstats()
     data = {}
@@ -514,8 +514,9 @@ def api_playerstats_achievements(world): #TODO multiworld
         data[player] = playerdict
     return data
 
-@application.route('/world/<world>/playerstats/by-id/<identifier>.json')
-def api_playerstats_by_id(world, identifier): #TODO multiworld
+@api.util2.json_route(application, '/world/<world>/playerstats/by-id/<identifier>')
+@api.util2.decode_args
+def api_playerstats_by_id(world: minecraft.World, identifier): #TODO multiworld
     """Returns the stat item &lt;identifier&gt; from all player stats"""
     alldata = api_playerstats()
     data = {}
@@ -524,12 +525,13 @@ def api_playerstats_by_id(world, identifier): #TODO multiworld
         playerdict = {}
         if identifier in playerdata:
             data[player] = playerdata[identifier]
-    if len(data) == 0:
+    if len(data) == 0: #TODO only error if the stat is also not found in assets
         bottle.abort(404, 'Identifier not found')
     return data
 
-@application.route('/world/<world>/playerstats/entity.json')
-def api_playerstats_entities(world): #TODO multiworld
+@api.util2.json_route(application, '/world/<world>/playerstats/entity')
+@api.util2.decode_args
+def api_playerstats_entities(world: minecraft.World): #TODO multiworld
     """Returns all entity stats in one file"""
     alldata = api_playerstats()
     data = {}
@@ -545,8 +547,9 @@ def api_playerstats_entities(world): #TODO multiworld
         data[player] = playerdict
     return data
 
-@application.route('/world/<world>/playerstats/general.json')
-def api_playerstats_general(world): #TODO multiworld
+@api.util2.json_route(application, '/world/<world>/playerstats/general')
+@api.util2.decode_args
+def api_playerstats_general(world: minecraft.World): #TODO multiworld
     """Returns all general stats in one file"""
     all_data = api_playerstats()
     data = {}
@@ -563,8 +566,9 @@ def api_playerstats_general(world): #TODO multiworld
         data[player] = player_dict
     return data
 
-@application.route('/world/<world>/playerstats/item.json')
-def api_playerstats_items(world): #TODO multiworld
+@api.util2.json_route(application, '/world/<world>/playerstats/item')
+@api.util2.decode_args
+def api_playerstats_items(world: minecraft.World): #TODO multiworld
     """Returns all item and block stats in one file"""
     all_data = api_playerstats()
     data = {}
@@ -578,14 +582,16 @@ def api_playerstats_items(world): #TODO multiworld
         data[player] = player_dict
     return data
 
-@application.route('/world/<world>/scoreboard.json')
-def api_scoreboard(world): #TODO multiworld
+@api.util2.json_route(application, '/world/<world>/scoreboard')
+@api.util2.decode_args
+def api_scoreboard(world: minecraft.World): #TODO multiworld
     """Returns the scoreboard data encoded as JSON"""
     nbtfile = os.path.join(config('serverDir'), config('worldName'), 'data', 'scoreboard.dat') #TODO use systemd-minecraft world object
     return api.util2.nbtfile_to_dict(nbtfile)
 
-@application.route('/world/<world>/sessions/lastseen.json')
-def api_sessions_last_seen_world(world): #TODO multiworld
+@api.util2.json_route(application, '/world/<world>/sessions/lastseen')
+@api.util2.decode_args
+def api_sessions_last_seen_world(world: minecraft.World): #TODO multiworld
     """Returns the last known session for each player"""
     matches = {
         'join': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([a-z0-9]+|\\?) joined ([A-Za-z0-9_]{1,16})',
@@ -636,8 +642,9 @@ def api_sessions_last_seen_world(world): #TODO multiworld
             session['leaveReason'] = 'currentlyOnline'
     return ret
 
-@application.route('/world/<world>/sessions/overview.json')
-def api_sessions(world): #TODO multiworld
+@api.util2.json_route(application, '/world/<world>/sessions/overview')
+@api.util2.decode_args
+def api_sessions(world: minecraft.World): #TODO multiworld
     """Returns known players' sessions since the first recorded server restart"""
     #TODO log parsing
     uptimes = []
@@ -709,13 +716,13 @@ def api_sessions(world): #TODO multiworld
         uptimes.append(current_uptime)
     return {'uptimes': uptimes}
 
-@application.route('/world/<world>/status.json')
-def api_world_status(world):
+@api.util2.json_route(application, '/world/<world>/status')
+@api.util2.decode_args
+def api_world_status(world: minecraft.World):
     """Returns JSON containing info about the given world, including whether the server is running, the current Minecraft version, and the list of people who are online. Requires mcstatus and people."""
     import mcstatus
     import people
 
-    world = minecraft.World(world)
     result = api.util2.short_world_status(world)
     server = mcstatus.MinecraftServer.lookup(api.util.CONFIG['host'] if world.is_main else '{}.{}'.format(world, api.util.CONFIG['host']))
     try:
@@ -736,40 +743,40 @@ def api_world_status(world):
         result['list'] = [wmb_id(player) for player in (status.players.sample or [])]
         return result
 
-@application.route('/world/<world>/villages/end.json')
-def api_villages_end(world):
+@api.util2.json_route(application, '/world/<world>/villages/end')
+@api.util2.decode_args
+def api_villages_end(world: minecraft.World):
     """Returns the villages.dat in the End, encoded as JSON"""
-    world = minecraft.World(world)
     nbt_file = world.world_path / 'data' / 'villages_end.dat'
     return api.util2.nbtfile_to_dict(nbt_file)
 
-@application.route('/world/<world>/villages/nether.json')
-def api_villages_nether(world):
+@api.util2.json_route(application, '/world/<world>/villages/nether')
+@api.util2.decode_args
+def api_villages_nether(world: minecraft.World):
     """Returns the villages.dat in the Nether, encoded as JSON"""
-    world = minecraft.World(world)
     nbt_file = world.world_path / 'data' / 'villages_nether.dat'
     return api.util2.nbtfile_to_dict(nbt_file)
 
-@application.route('/world/<world>/villages/overworld.json')
-def api_villages_overworld(world):
+@api.util2.json_route(application, '/world/<world>/villages/overworld')
+@api.util2.decode_args
+def api_villages_overworld(world: minecraft.World):
     """Returns the villages.dat in the Overworld, encoded as JSON"""
-    world = minecraft.World(world)
     nbt_file = world.world_path / 'data' / 'villages.dat'
     return api.util2.nbtfile_to_dict(nbt_file)
 
-@application.route('/world/<world>/whitelist.json')
-def api_whitelist(world): #TODO multiworld
+@api.util2.json_route(application, '/world/<world>/whitelist')
+@api.util2.decode_args
+def api_whitelist(world: minecraft.World): #TODO multiworld
     """For UUID-based worlds (Minecraft 1.7.6 and later), returns the whitelist. For older worlds, the behavior is undefined."""
-    world = minecraft.World(world)
     with (world.path / 'whitelist.json').open() as whitelist:
-        return whitelist.read()
+        return json.load(whitelist)
 
-@application.route('/server/players.json')
+@api.util2.json_route(application,'/server/players')
 def api_player_ids():
     """Returns an array of all known player IDs (Wurstmineberg IDs and Minecraft UUIDs)"""
-    return json.dumps(api.util2.all_players(), sort_keys=True, indent=4)
+    return api.util2.all_players()
 
-@application.route('/server/sessions/lastseen.json')
+@api.util2.json_route(application, '/server/sessions/lastseen')
 def api_sessions_last_seen_all(): #TODO multiworld
     """Returns the last known session for each player"""
     matches = {
@@ -821,7 +828,7 @@ def api_sessions_last_seen_all(): #TODO multiworld
             session['leaveReason'] = 'currentlyOnline'
     return ret
 
-@application.route('/server/worlds.json')
+@api.util2.json_route(application, '/server/worlds')
 def api_worlds():
     """Returns an object mapping existing world names to short status summaries (like those returned by /world/&lt;world&gt;/status.json but without the lists of online players)"""
     return {world.name: api.util2.short_world_status(world) for world in minecraft.worlds()}
