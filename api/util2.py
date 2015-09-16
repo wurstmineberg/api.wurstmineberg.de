@@ -52,6 +52,7 @@ class Player:
                         if person_uuid == self.uuid:
                             self.wurstmineberg_id = wurstmineberg_id
                             self.data = person_data
+                            self.data['minecraft']['uuid'] = str(self.uuid) # make sure the UUID is included in the JSON data
                             break
                 else:
                     self.data = None
@@ -61,6 +62,7 @@ class Player:
             elif len(self.data['minecraft'].get('nicks', [])) > 0: # Minecraft UUID missing but Minecraft nick(s) present
                 self.uuid = uuid.UUID(requests.get('https://api.mojang.com/users/profiles/minecraft/{}'.format(self.data['minecraft']['nicks'][-1])).json()['id']) # get UUID from Mojang
                 db.person_set_key(self.wurstmineberg_id, 'minecraft.uuid', str(self.uuid)) # write back to people database
+                self.data['minecraft']['uuid'] = str(self.uuid) # make sure the UUID is included in the JSON data
 
 def all_players(): #TODO change to use Wurstmineberg/Minecraft IDs
     """Returns all known player IDs (Wurstmineberg IDs and Minecraft UUIDs)"""
