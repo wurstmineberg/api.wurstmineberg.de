@@ -17,7 +17,7 @@ import uuid
 
 class Player:
     def __init__(self, player_id):
-        if re.match('[a-z][0-9a-z]{1,15}', player_id):
+        if re.fullmatch('[a-z][0-9a-z]{1,15}', player_id):
             import people
 
             db = people.get_people_db()
@@ -63,6 +63,12 @@ class Player:
                 self.uuid = uuid.UUID(requests.get('https://api.mojang.com/users/profiles/minecraft/{}'.format(self.data['minecraft']['nicks'][-1])).json()['id']) # get UUID from Mojang
                 db.person_set_key(self.wurstmineberg_id, 'minecraft.uuid', str(self.uuid)) # write back to people database
                 self.data['minecraft']['uuid'] = str(self.uuid) # make sure the UUID is included in the JSON data
+
+    def __str__(self):
+        if self.wurstmineberg_id is None:
+            return str(self.uuid)
+        else:
+            return self.wurstmineberg_id
 
 def all_players(): #TODO change to use Wurstmineberg/Minecraft IDs
     """Returns all known player IDs (Wurstmineberg IDs and Minecraft UUIDs)"""

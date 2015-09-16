@@ -687,9 +687,8 @@ def api_sessions(world: minecraft.World): #TODO multiworld
 @api.util2.json_route(application, '/world/<world>/status')
 @api.util2.decode_args
 def api_world_status(world: minecraft.World):
-    """Returns JSON containing info about the given world, including whether the server is running, the current Minecraft version, and the list of people who are online. Requires mcstatus and people."""
+    """Returns JSON containing info about the given world, including whether the server is running, the current Minecraft version, and the list of people who are online. Requires mcstatus."""
     import mcstatus
-    import people
 
     result = api.util2.short_world_status(world)
     server = mcstatus.MinecraftServer.lookup(api.util.CONFIG['worldHost'] if world.is_main else '{}.{}'.format(world, api.util.CONFIG['worldHost']))
@@ -697,19 +696,9 @@ def api_world_status(world: minecraft.World):
         status = server.status()
     except ConnectionRefusedError:
         result['list'] = []
-        return result
     else:
-        people_data = people.get_people_db().obj_dump(version=3)['people']
-        def wmb_id(player_info):
-            for wmb_id, person_data in people_data.items():
-                if 'minecraftUUID' in person_data and uuid.UUID(person_data['minecraftUUID']) == uuid.UUID(player_info.id):
-                    return wmb_id
-            for wmb_id, person_data in people_data.items():
-                if person_data['minecraft'] == player_info.name:
-                    return wmb_id
-
-        result['list'] = [wmb_id(player) for player in (status.players.sample or [])]
-        return result
+        result['list'] = [str(api.util2.Player(player.id)) for player in (status.players.sample or [])]
+    return result
 
 @api.util2.json_route(application, '/world/<world>/villages/end')
 @api.util2.decode_args
