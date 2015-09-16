@@ -62,7 +62,7 @@ class Player:
                         self.data = {
                             'minecraft': {
                                 'uuid': self.uuid,
-                                'nicks': [name_info.name for name_info in names_response.json()]
+                                'nicks': [name_info['name'] for name_info in names_response.json()]
                             }
                         }
         if self.uuid is None and 'minecraft' in self.data:
