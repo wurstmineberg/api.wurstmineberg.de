@@ -415,14 +415,14 @@ def api_player_stats(world: minecraft.World, player: api.util2.Player):
 
 @api.util2.json_route(application, '/world/<world>/playerdata/all')
 @api.util2.decode_args
-def api_player_data_all(world: minecraft.World): #TODO multiworld
+def api_player_data_all(world: minecraft.World):
     """Returns the player data of all known players, encoded as JSON"""
-    nbtdicts = {}
-    for user in api.util2.all_players():
-        with contextlib.suppress(FileNotFoundError):
-            nbtdata = api_player_data(user)
-        nbtdicts[user] = nbtdata
-    return nbtdicts
+    nbt_dicts = {}
+    for data_path in (world.world_path / 'playerdata').iterdir():
+        if data_path.suffix == '.dat':
+            player = api.util2.Player(data_path.stem)
+            nbt_dicts[str(player)] = api.util2.nbtfile_to_dict(data_path)
+    return nbt_dicts
 
 @api.util2.json_route(application, '/world/<world>/playerdata/by-id/<identifier>')
 @api.util2.decode_args
@@ -714,10 +714,10 @@ def api_whitelist(world: minecraft.World): #TODO multiworld
     with (world.path / 'whitelist.json').open() as whitelist:
         return json.load(whitelist)
 
-@api.util2.json_route(application,'/server/players')
+@api.util2.json_route(application, '/server/players')
 def api_player_ids():
     """Returns an array of all known player IDs (Wurstmineberg IDs and Minecraft UUIDs)"""
-    return api.util2.all_players()
+    return list(api.util2.Player.all())
 
 @api.util2.json_route(application, '/server/sessions/lastseen')
 def api_sessions_last_seen_all(): #TODO multiworld

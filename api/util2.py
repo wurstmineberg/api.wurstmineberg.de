@@ -73,25 +73,42 @@ class Player:
                 db.person_set_key(self.wurstmineberg_id, 'minecraft.uuid', str(self.uuid)) # write back to people database
                 self.data['minecraft']['uuid'] = str(self.uuid) # make sure the UUID is included in the JSON data
 
+    def __eq__(self, other):
+        if not isinstance(other, Player):
+            return False
+        if self.wurstmineberg_id is not None:
+            return self.wurstmineberg_id == other.wurstmineberg_id
+        return self.uuid == other.uuid
+
     def __str__(self):
         if self.wurstmineberg_id is None:
             return str(self.uuid)
         else:
             return self.wurstmineberg_id
 
-def all_players(): #TODO change to use Wurstmineberg/Minecraft IDs
-    """Returns all known player IDs (Wurstmineberg IDs and Minecraft UUIDs)"""
-    try:
-        data = [entry['name'] for entry in json.loads(api_whitelist())]
-    except:
-        data = []
-    directory = os.path.join(config('serverDir'), config('worldName'), 'players') #TODO multiworld
-    for root, dirs, files in os.walk(directory):
-        for file in files:
-            if file.endswith('.dat'):
-                name = os.path.splitext(file)[0]
-                data.append(name)
-    return data
+    @classmethod
+    def all(cls):
+        """Yields all known players."""
+        found = set()
+        def find(person_id):
+            person = cls(person_id)
+            if person not in found:
+                found.add(person)
+                yield person
+
+        # from people file
+        try:
+            import people
+        except ImportError:
+            pass # no people db
+        else:
+            for wurstmineberg_id in people.get_people_db().obj_dump(version=3)['people']:
+                yield from find(wurstmineberg_id)
+        # from player data files
+        for world in minecraft.worlds():
+            for player_path in (world.world_path / 'playerdata').iterdir():
+                if player_path.suffix == '.dat':
+                    yield from find(player_path.stem)
 
 def nbtfile_to_dict(filename, *, add_metadata=True):
     """Generates a JSON-serializable value from a path (string or pathlib.Path) representing a NBT file.
