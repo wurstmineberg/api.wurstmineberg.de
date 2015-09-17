@@ -179,7 +179,10 @@ def skin_cache_check(image_path):
 
 def decode_args(f):
     @functools.wraps(f)
-    def decorated(**kwargs):
+    def decorated(*args, **kwargs):
+        for param, arg in zip(inspect.signature(f).parameters.values(), args):
+            if param.name not in kwargs:
+                kwargs[param.name] = arg
         decoded_args = {}
         for param in inspect.signature(f).parameters.values():
             arg = kwargs[param.name]
@@ -209,9 +212,9 @@ def json_route(app, route):
     def decorator(f):
         @app.route(route + '.json')
         @functools.wraps(f)
-        def json_encoded(**kwargs):
+        def json_encoded(*args, **kwargs):
             bottle.response.content_type = 'application/json'
-            return json.dumps(f(**kwargs), sort_keys=True, indent=4)
+            return json.dumps(f(*args, **kwargs), sort_keys=True, indent=4)
 
         pass #TODO add HTML view endpoint
         return f
