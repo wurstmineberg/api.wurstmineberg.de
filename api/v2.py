@@ -440,7 +440,7 @@ def api_player_data_by_id(world: minecraft.World, identifier): #TODO multiworld,
 @api.util2.json_route(application, '/world/<world>/playerstats/all')
 @api.util2.decode_args
 def api_playerstats(world: minecraft.World):
-    """Returns all player stats in one file. This file can be potentially big. Please use one of the other endpoints if possible."""
+    """Returns all stats for all players in one file."""
     data = {}
     people = None
     stats_dir = world.world_path / 'stats'
