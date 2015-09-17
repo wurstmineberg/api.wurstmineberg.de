@@ -445,7 +445,7 @@ def api_playerstats(world: minecraft.World):
     people = None
     stats_dir = world.world_path / 'stats'
     for stats_path in stats_dir.iterdir():
-        if stats_path.name.suffix == '.json':
+        if stats_path.suffix == '.json':
             with stats_path.open() as stats_file:
                 person = api.util2.Player(stats_path.stem)
                 data[str(person)] = json.load(stats_file)
