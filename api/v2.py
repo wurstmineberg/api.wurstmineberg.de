@@ -439,29 +439,16 @@ def api_player_data_by_id(world: minecraft.World, identifier): #TODO multiworld,
 
 @api.util2.json_route(application, '/world/<world>/playerstats/all')
 @api.util2.decode_args
-def api_playerstats(world: minecraft.World): #TODO multiworld
+def api_playerstats(world: minecraft.World):
     """Returns all player stats in one file. This file can be potentially big. Please use one of the other endpoints if possible."""
     data = {}
     people = None
-    directory = os.path.join(config('serverDir'), config('worldName'), 'stats') #TODO use systemd-minecraft world object
-    for root, dirs, files in os.walk(directory):
-        for file_name in files:
-            if file_name.endswith(".json"):
-                with open(os.path.join(directory, file_name), 'r') as playerfile:
-                    name = os.path.splitext(file_name)[0]
-                    uuid_filename = re.match('([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]+)$', name)
-                    if uuid_filename:
-                        uuid = ''.join(uuid_filename.groups())
-                        if people is None:
-                            with open(config('peopleFile')) as people_json: #TODO use people module
-                                people = json.load(people_json)
-                                if isinstance(data, dict):
-                                    people = people['people']
-                        for person in people:
-                            if (person.get('minecraftUUID') == uuid or person.get('minecraftUUID') == name) and 'minecraft' in person:
-                                name = person['minecraft']
-                                break
-                    data[name] = json.loads(playerfile.read())
+    stats_dir = world.world_path / 'stats'
+    for stats_path in stats_dir.iterdir():
+        if stats_path.name.suffix == '.json':
+            with stats_path.open() as stats_file:
+                person = api.util2.Player(stats_path.stem)
+                data[str(person)] = json.load(stats_file)
     return data
 
 @api.util2.json_route(application, '/world/<world>/playerstats/achievement')
