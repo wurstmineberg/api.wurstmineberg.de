@@ -181,7 +181,6 @@ def api_player_people():
     for person in db['people'].values():
         if 'gravatar' in person:
             person['gravatar'] = 'http://www.gravatar.com/avatar/{}'.format(hashlib.md5(person['gravatar'].encode('utf-8')).hexdigest())
-            del person['gravatar']
     return db
 
 @api.util2.json_route(application, '/player/<player>/info')
