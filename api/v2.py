@@ -460,9 +460,8 @@ def api_playerstats_achievements(world: minecraft.World):
     all_data = api_playerstats(world)
     data = {}
     for player_id, player_data in all_data.items():
-        for stat_str, value in player_data.items():
-            if stat_str == 'achievement':
-                data[player_id] = value
+        if 'achievement' in player_data:
+            data[player_id] = player_data['achievement']
     return data
 
 @api.util2.json_route(application, '/world/<world>/playerstats/by-id/<identifier>')
@@ -493,7 +492,7 @@ def api_playerstats_entities(world: minecraft.World):
     all_data = api_playerstats(world)
     data = {}
     for player_id, player_data in all_data.items():
-        for stat_str, value in player_data.items():
+        for stat_str, value in player_data.get('stat', {}).items():
             if stat_str in ('killEntity', 'entityKilledBy'):
                 if player_id not in data:
                     data[player_id] = {}
@@ -505,11 +504,21 @@ def api_playerstats_entities(world: minecraft.World):
 def api_playerstats_general(world: minecraft.World):
     """Returns all general stats in one file"""
     all_data = api_playerstats(world)
+    non_general = (
+        'breakItem',
+        'craftItem',
+        'drop',
+        'entityKilledBy',
+        'killEntity',
+        'mineBlock',
+        'pickup',
+        'useItem'
+    )
     data = {}
     for player_id, player_data in all_data.items():
-        for stat_str, value in player_data.items():
-            if stat_str == 'stat':
-                data[player_id] = value
+        filtered = {stat_id: stat for stat_id, stat in player_data.get('stat', {}).items() if stat_id not in non_general}
+        if len(filtered) > 0:
+            data[player_id] = filtered
     return data
 
 @api.util2.json_route(application, '/world/<world>/playerstats/item')
@@ -519,7 +528,7 @@ def api_playerstats_items(world: minecraft.World):
     all_data = api_playerstats(world)
     data = {}
     for player_id, player_data in all_data.items():
-        for stat_str, value in player_data.items():
+        for stat_str, value in player_data.get('stat', {}).items():
             if stat_str in ('useItem', 'craftItem', 'breakItem', 'mineBlock', 'pickup', 'drop'):
                 if player_id not in data:
                     data[player_id] = {}
