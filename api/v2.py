@@ -192,6 +192,17 @@ def api_player_info(player: api.util2.Player):
         person_data['gravatar'] = 'http://www.gravatar.com/avatar/{}'.format(hashlib.md5(person_data['gravatar'].encode('utf-8')).hexdigest())
     return person_data
 
+@application.route('/player/<player>/skin/render/front/<size>.png')
+@api.util2.decode_args
+def api_skin_render_front_png(player: api.util2.Player, size: range(1025)):
+    """Returns a player skin in front view (including the overlay layers), as a &lt;size&gt;×(2*&lt;size&gt;)px PNG image file. Requires playerhead."""
+    def image_func():
+        import playerhead
+
+        return playerhead.body(player.data['minecraft']['nicks'][-1], profile_id=player.uuid).resize((size, 2 * size))
+
+    return api.util2.cached_image('skins/front-views/{}/{}.png'.format(size, player.wurstmineberg_id), image_func, api.util2.skin_cache_check)
+
 @application.route('/player/<player>/skin/render/head/<size>.png')
 @api.util2.decode_args
 def api_skin_render_head_png(player: api.util2.Player, size: range(1025)):
