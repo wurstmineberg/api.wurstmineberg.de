@@ -411,7 +411,7 @@ def api_player_stats(world: minecraft.World, player: api.util2.Player):
     if not stats_path.exists():
         player_minecraft_name = player.data['minecraft']['nicks'][-1]
         stats_path = world.world_path / 'stats' / '{}.json'.format(player_minecraft_name) #TODO use systemd-minecraft world object
-    with open(stats_path) as stats_file:
+    with stats_path.open() as stats_file:
         stats = json.load(stats_file)
     ret = {}
     for stat_name, value in stats.items():
