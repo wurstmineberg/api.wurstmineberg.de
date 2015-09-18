@@ -420,8 +420,13 @@ def api_player_stats(world: minecraft.World, player: api.util2.Player):
         for key in key_path[:-1]:
             if key not in parent:
                 parent[key] = {}
+            elif not isinstance(parent[key], dict):
+                parent[key] = {'summary': parent[key]}
             parent = parent[key]
-        parent[key_path[-1]] = value #TODO add support for summary stats (stat.drop)
+        if key_path[-1] in parent:
+            parent[key_path[-1]]['summary'] = value
+        else:
+            parent[key_path[-1]] = value
     return ret
 
 @api.util2.json_route(application, '/world/<world>/playerdata/all')
