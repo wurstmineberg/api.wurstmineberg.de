@@ -455,87 +455,75 @@ def api_playerstats(world: minecraft.World):
 
 @api.util2.json_route(application, '/world/<world>/playerstats/achievement')
 @api.util2.decode_args
-def api_playerstats_achievements(world: minecraft.World): #TODO multiworld
+def api_playerstats_achievements(world: minecraft.World):
     """Returns all achievement stats in one file"""
-    alldata = api_playerstats(world)
+    all_data = api_playerstats(world)
     data = {}
-    for player in alldata:
-        playerdata = alldata[player]
-        playerdict = {}
-        for statstr in playerdata:
-            value = playerdata[statstr]
-            stat = statstr.split('.')
-            if stat[0] == 'achievement':
-                playerdict[statstr] = value
-        data[player] = api.util.format_stats(playerdict)
+    for player_id, player_data in all_data.items():
+        for stat_str, value in player_data.items():
+            if stat_str == 'achievement':
+                data[player_id] = value
     return data
 
 @api.util2.json_route(application, '/world/<world>/playerstats/by-id/<identifier>')
 @api.util2.decode_args
-def api_playerstats_by_id(world: minecraft.World, identifier): #TODO multiworld
-    """Returns the stat item &lt;identifier&gt; from all player stats"""
-    alldata = api_playerstats(world)
+def api_playerstats_by_id(world: minecraft.World, identifier):
+    """Returns the stat item &lt;identifier&gt; from all player stats."""
+    all_data = api_playerstats(world)
+    key_path = identifier.split('.')
     data = {}
-    for player in alldata:
-        playerdata = alldata[player]
-        playerdict = {}
-        if identifier in playerdata:
-            data[player] = playerdata[identifier]
+    for player_id, player_data in all_data.items():
+        parent = player_data
+        for key in key_path[:-1]:
+            if key not in parent:
+                parent[key] = {}
+            elif not isinstance(parent[key], dict):
+                parent[key] = {'summary': parent[key]}
+            parent = parent[key]
+        if key_path[-1] in parent:
+            data[player_id] = parent[key_path[-1]]
     if len(data) == 0: #TODO only error if the stat is also not found in assets
         bottle.abort(404, 'Identifier not found')
     return data
 
 @api.util2.json_route(application, '/world/<world>/playerstats/entity')
 @api.util2.decode_args
-def api_playerstats_entities(world: minecraft.World): #TODO multiworld
+def api_playerstats_entities(world: minecraft.World):
     """Returns all entity stats in one file"""
-    alldata = api_playerstats(world)
+    all_data = api_playerstats(world)
     data = {}
-    entityActions = ['killEntity', 'entityKilledBy']
-    for player in alldata:
-        playerdata = alldata[player]
-        playerdict = {}
-        for statstr in playerdata:
-            value = playerdata[statstr]
-            stat = statstr.split('.')
-            if stat[0] == 'stat' and stat[1] in entityActions:
-                playerdict[statstr] = value
-        data[player] = api.util.format_stats(playerdict)
+    for player_id, player_data in all_data.items():
+        for stat_str, value in player_data.items():
+            if stat_str in ('killEntity', 'entityKilledBy'):
+                if player_id not in data:
+                    data[player_id] = {}
+                data[player_id][stat_str] = value
     return data
 
 @api.util2.json_route(application, '/world/<world>/playerstats/general')
 @api.util2.decode_args
-def api_playerstats_general(world: minecraft.World): #TODO multiworld
+def api_playerstats_general(world: minecraft.World):
     """Returns all general stats in one file"""
     all_data = api_playerstats(world)
     data = {}
-    for player, player_data in all_data.items():
-        player_dict = {}
+    for player_id, player_data in all_data.items():
         for stat_str, value in player_data.items():
-            stat = stat_str.split('.')
-            if stat[0] == 'stat' and len(stat) == 2:
-                player_dict[stat_str] = value
-            elif stat[0] == 'stat' and stat[1] == 'pickup':
-                if 'stat.pickup' not in player_dict:
-                    player_dict['stat.pickup'] = 0
-                player_dict['stat.pickup'] += value
-        data[player] = api.util.format_stats(player_dict)
+            if stat_str == 'stat':
+                data[player_id] = value
     return data
 
 @api.util2.json_route(application, '/world/<world>/playerstats/item')
 @api.util2.decode_args
-def api_playerstats_items(world: minecraft.World): #TODO multiworld
+def api_playerstats_items(world: minecraft.World):
     """Returns all item and block stats in one file"""
     all_data = api_playerstats(world)
     data = {}
-    item_actions = 'useItem', 'craftItem', 'breakItem', 'mineBlock', 'pickup', 'drop'
-    for player, player_data in all_data.items():
-        player_dict = {}
+    for player_id, player_data in all_data.items():
         for stat_str, value in player_data.items():
-            stat = stat_str.split('.')
-            if stat[0] == 'stat' and stat[1] in item_actions:
-                player_dict[stat_str] = value
-        data[player] = api.util.format_stats(player_dict)
+            if stat_str in ('useItem', 'craftItem', 'breakItem', 'mineBlock', 'pickup', 'drop'):
+                if player_id not in data:
+                    data[player_id] = {}
+                data[player_id][stat_str] = value
     return data
 
 @api.util2.json_route(application, '/world/<world>/scoreboard')

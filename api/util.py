@@ -149,4 +149,8 @@ def format_stats(stats):
             parent[key_path[-1]]['summary'] = value
         else:
             parent[key_path[-1]] = value
+        if key_path[:2] == ['stat', 'pickup'] and len(key_path) > 2:
+            if 'summary' not in ret['stat']['pickup']:
+                ret['stat']['pickup']['summary'] = 0
+            ret['stat']['pickup']['summary'] += value
     return ret
