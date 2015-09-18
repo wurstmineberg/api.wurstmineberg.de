@@ -728,7 +728,7 @@ def api_whitelist(world: minecraft.World): #TODO multiworld
 @api.util2.json_route(application, '/server/players')
 def api_player_ids():
     """Returns an array of all known player IDs (Wurstmineberg IDs and Minecraft UUIDs)"""
-    return list(api.util2.Player.all())
+    return [str(player) for player in api.util2.Player.all()]
 
 @api.util2.json_route(application, '/server/sessions/lastseen')
 def api_sessions_last_seen_all(): #TODO multiworld
