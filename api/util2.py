@@ -111,9 +111,10 @@ class Player:
                 yield from find(wurstmineberg_id)
         # from player data files
         for world in minecraft.worlds():
-            for player_path in (world.world_path / 'playerdata').iterdir():
-                if player_path.suffix == '.dat':
-                    yield from find(player_path.stem)
+            if (world.world_path / 'playerdata').exists():
+                for player_path in (world.world_path / 'playerdata').iterdir():
+                    if player_path.suffix == '.dat':
+                        yield from find(player_path.stem)
 
 def nbtfile_to_dict(filename, *, add_metadata=True):
     """Generates a JSON-serializable value from a path (string or pathlib.Path) representing a NBT file.
