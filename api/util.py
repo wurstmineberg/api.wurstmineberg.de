@@ -133,3 +133,20 @@ def map_image(map_dict):
         color = tuple(round(palette_color * [180, 220, 255, 135][color_variant] / 255) for palette_color in map_palette[base_color]) + (255,)
         ret.putpixel((x, y), color)
     return ret
+
+def format_stats(stats):
+    ret = {}
+    for stat_name, value in stats.items():
+        parent = ret
+        key_path = stat_name.split('.')
+        for key in key_path[:-1]:
+            if key not in parent:
+                parent[key] = {}
+            elif not isinstance(parent[key], dict):
+                parent[key] = {'summary': parent[key]}
+            parent = parent[key]
+        if key_path[-1] in parent:
+            parent[key_path[-1]]['summary'] = value
+        else:
+            parent[key_path[-1]] = value
+    return ret

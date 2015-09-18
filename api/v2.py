@@ -413,21 +413,7 @@ def api_player_stats(world: minecraft.World, player: api.util2.Player):
         stats_path = world.world_path / 'stats' / '{}.json'.format(player_minecraft_name) #TODO use systemd-minecraft world object
     with stats_path.open() as stats_file:
         stats = json.load(stats_file)
-    ret = {}
-    for stat_name, value in stats.items():
-        parent = ret
-        key_path = stat_name.split('.')
-        for key in key_path[:-1]:
-            if key not in parent:
-                parent[key] = {}
-            elif not isinstance(parent[key], dict):
-                parent[key] = {'summary': parent[key]}
-            parent = parent[key]
-        if key_path[-1] in parent:
-            parent[key_path[-1]]['summary'] = value
-        else:
-            parent[key_path[-1]] = value
-    return ret
+    return api.util.format_stats(stats)
 
 @api.util2.json_route(application, '/world/<world>/playerdata/all')
 @api.util2.decode_args
@@ -464,7 +450,7 @@ def api_playerstats(world: minecraft.World):
         if stats_path.suffix == '.json':
             with stats_path.open() as stats_file:
                 person = api.util2.Player(stats_path.stem)
-                data[str(person)] = json.load(stats_file)
+                data[str(person)] = api.util.format_stats(json.load(stats_file))
     return data
 
 @api.util2.json_route(application, '/world/<world>/playerstats/achievement')
@@ -481,7 +467,7 @@ def api_playerstats_achievements(world: minecraft.World): #TODO multiworld
             stat = statstr.split('.')
             if stat[0] == 'achievement':
                 playerdict[statstr] = value
-        data[player] = playerdict
+        data[player] = api.util.format_stats(playerdict)
     return data
 
 @api.util2.json_route(application, '/world/<world>/playerstats/by-id/<identifier>')
@@ -514,7 +500,7 @@ def api_playerstats_entities(world: minecraft.World): #TODO multiworld
             stat = statstr.split('.')
             if stat[0] == 'stat' and stat[1] in entityActions:
                 playerdict[statstr] = value
-        data[player] = playerdict
+        data[player] = api.util.format_stats(playerdict)
     return data
 
 @api.util2.json_route(application, '/world/<world>/playerstats/general')
@@ -533,7 +519,7 @@ def api_playerstats_general(world: minecraft.World): #TODO multiworld
                 if 'stat.pickup' not in player_dict:
                     player_dict['stat.pickup'] = 0
                 player_dict['stat.pickup'] += value
-        data[player] = player_dict
+        data[player] = api.util.format_stats(player_dict)
     return data
 
 @api.util2.json_route(application, '/world/<world>/playerstats/item')
@@ -549,7 +535,7 @@ def api_playerstats_items(world: minecraft.World): #TODO multiworld
             stat = stat_str.split('.')
             if stat[0] == 'stat' and stat[1] in item_actions:
                 player_dict[stat_str] = value
-        data[player] = player_dict
+        data[player] = api.util.format_stats(player_dict)
     return data
 
 @api.util2.json_route(application, '/world/<world>/scoreboard')

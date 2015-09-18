@@ -248,16 +248,7 @@ def api_player_data(player_minecraft_name):
 def api_player_stats_grouped(player_id):
     """Returns the player's stats formatted as JSON with stats grouped into objects by category"""
     stats = api_stats(player_id)
-    ret = {}
-    for stat_name, value in stats.items():
-        parent = ret
-        key_path = stat_name.split('.')
-        for key in key_path[:-1]:
-            if key not in parent:
-                parent[key] = {}
-            parent = parent[key]
-        parent[key_path[-1]] = value
-    return ret
+    return api.util.format_stats(stats)
 
 @application.route('/player/:player_minecraft_name/stats.json')
 def api_stats(player_minecraft_name):
