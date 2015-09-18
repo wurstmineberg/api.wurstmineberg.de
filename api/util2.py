@@ -80,6 +80,11 @@ class Player:
             return self.wurstmineberg_id == other.wurstmineberg_id
         return self.uuid == other.uuid
 
+    def __hash__(self):
+        if self.wurstmineberg_id is not None:
+            return hash(self.wurstmineberg_id)
+        return hash(self.uuid)
+
     def __str__(self):
         if self.wurstmineberg_id is None:
             return str(self.uuid)
