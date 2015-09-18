@@ -386,14 +386,14 @@ def api_map_render_png(world: minecraft.World, identifier: int): #TODO multiworl
     def cache_check(image_path):
         if not image_path.exists():
             return False
-        if image_path.stat().st_mtime < (world.world_path / 'data' / 'map_{}.dat'.format(identifier)).stat()/st_mtime + 60:
+        if image_path.stat().st_mtime < (world.world_path / 'data' / 'map_{}.dat'.format(identifier)).stat().st_mtime + 60:
             return False
         return True
 
     def image_func():
         return api.util.map_image(api_map_by_id(world, identifier))
 
-    return api.util2.cached_image('map-renders/{}.png'.format(identifier))
+    return api.util2.cached_image('map-renders/{}.png'.format(identifier), image_func, cache_check)
 
 @api.util2.json_route(application, '/world/<world>/player/<player>/playerdata')
 @api.util2.decode_args
