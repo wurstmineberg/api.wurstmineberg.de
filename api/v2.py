@@ -201,7 +201,7 @@ def api_skin_render_front_png(player: api.util2.Player, size: range(1025)):
 
         return playerhead.body(player.data['minecraft']['nicks'][-1], profile_id=player.uuid).resize((size, 2 * size))
 
-    return api.util2.cached_image('skins/front-views/{}/{}.png'.format(size, player.wurstmineberg_id), image_func, api.util2.skin_cache_check)
+    return api.util2.cached_image('skins/front-views/{}/{}.png'.format(size, player), image_func, api.util2.skin_cache_check)
 
 @application.route('/player/<player>/skin/render/head/<size>.png')
 @api.util2.decode_args
@@ -212,7 +212,7 @@ def api_skin_render_head_png(player: api.util2.Player, size: range(1025)):
 
         return playerhead.head(player.data['minecraft']['nicks'][-1], profile_id=player.uuid).resize((size, size))
 
-    return api.util2.cached_image('skins/heads/{}/{}.png'.format(size, player.wurstmineberg_id), image_func, api.util2.skin_cache_check)
+    return api.util2.cached_image('skins/heads/{}/{}.png'.format(size, player), image_func, api.util2.skin_cache_check)
 
 @api.util2.json_route(application, '/world/<world>/chunks/overworld/column/<x>/<z>')
 @api.util2.decode_args
