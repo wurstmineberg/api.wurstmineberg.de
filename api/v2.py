@@ -228,7 +228,7 @@ def api_chunk_column_end(world: minecraft.World, x: int, z: int):
 @api.util2.decode_args
 def api_chunk_info_end(world: minecraft.World, x: int, y: range(16), z: int):
     """Returns information about the given chunk section in JSON format. The nested arrays can be indexed in y-z-x order."""
-    return api.util2.chunk_section_info(api_chunk_column_end(world, x, z))
+    return api.util2.chunk_section_info(api_chunk_column_end(world, x, z), x, y, z)
 
 @api.util2.json_route(application, '/world/<world>/chunks/nether/column/<x>/<z>')
 @api.util2.decode_args
@@ -244,7 +244,7 @@ def api_chunk_column_nether(world: minecraft.World, x: int, z: int):
 @api.util2.decode_args
 def api_chunk_info_nether(world: minecraft.World, x: int, y: range(16), z: int):
     """Returns information about the given chunk section in JSON format. The nested arrays can be indexed in y-z-x order."""
-    return api.util2.chunk_section_info(api_chunk_column_nether(world, x, z))
+    return api.util2.chunk_section_info(api_chunk_column_nether(world, x, z), x, y, z)
 
 @api.util2.json_route(application, '/world/<world>/chunks/overworld/column/<x>/<z>')
 @api.util2.decode_args
@@ -260,7 +260,7 @@ def api_chunk_column_overworld(world: minecraft.World, x: int, z: int):
 @api.util2.decode_args
 def api_chunk_info_overworld(world: minecraft.World, x: int, y: range(16), z: int):
     """Returns information about the given chunk section in JSON format. The nested arrays can be indexed in y-z-x order."""
-    return api.util2.chunk_section_info(api_chunk_column_overworld(world, x, z))
+    return api.util2.chunk_section_info(api_chunk_column_overworld(world, x, z), x, y, z)
 
 @api.util2.json_route(application, '/world/<world>/deaths/latest')
 @api.util2.decode_args

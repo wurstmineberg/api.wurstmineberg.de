@@ -175,7 +175,7 @@ def short_world_status(world):
         'whitelist': world.config['whitelist']
     }
 
-def chunk_section_info(column):
+def chunk_section_info(column, x, y, z):
     def nybble(data, idx):
         result = data[idx // 2]
         if idx % 2:
