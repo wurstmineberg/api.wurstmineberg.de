@@ -381,7 +381,7 @@ def api_maps_index(world: minecraft.World):
 
 @application.route('/world/<world>/maps/render/<identifier>.png')
 @api.util2.decode_args
-def api_map_render_png(world: minecraft.World, identifier: int): #TODO multiworld
+def api_map_render_png(world: minecraft.World, identifier: int):
     """Returns the map item with damage value &lt;identifier&gt;, rendered as a PNG image file."""
     def cache_check(image_path):
         if not image_path.exists():
@@ -406,11 +406,10 @@ def api_player_data(world: minecraft.World, player: api.util2.Player):
 @api.util2.decode_args
 def api_player_stats(world: minecraft.World, player: api.util2.Player):
     """Returns the player's stats formatted as JSON with stats grouped into objects by category"""
-
     stats_path = world.world_path / 'stats' / '{}.json'.format(player.uuid)
     if not stats_path.exists():
         player_minecraft_name = player.data['minecraft']['nicks'][-1]
-        stats_path = world.world_path / 'stats' / '{}.json'.format(player_minecraft_name) #TODO use systemd-minecraft world object
+        stats_path = world.world_path / 'stats' / '{}.json'.format(player_minecraft_name)
     with stats_path.open() as stats_file:
         stats = json.load(stats_file)
     return api.util.format_stats(stats)
@@ -428,9 +427,9 @@ def api_player_data_all(world: minecraft.World):
 
 @api.util2.json_route(application, '/world/<world>/playerdata/by-id/<identifier>')
 @api.util2.decode_args
-def api_player_data_by_id(world: minecraft.World, identifier): #TODO multiworld, player IDs
+def api_player_data_by_id(world: minecraft.World, identifier):
     """Returns a dictionary with player IDs as the keys, and their player data fields &lt;identifier&gt; as the values"""
-    all_data = api_player_data_all()
+    all_data = api_player_data_all(world)
     data = {}
     for player in all_data:
         playerdata = all_data[player]
@@ -537,10 +536,10 @@ def api_playerstats_items(world: minecraft.World):
 
 @api.util2.json_route(application, '/world/<world>/scoreboard')
 @api.util2.decode_args
-def api_scoreboard(world: minecraft.World): #TODO multiworld
+def api_scoreboard(world: minecraft.World):
     """Returns the scoreboard data encoded as JSON"""
-    nbtfile = os.path.join(config('serverDir'), config('worldName'), 'data', 'scoreboard.dat') #TODO use systemd-minecraft world object
-    return api.util2.nbtfile_to_dict(nbtfile)
+    nbt)file = world.world_path / 'data' / 'scoreboard.dat'
+    return api.util2.nbtfile_to_dict(nbt_file)
 
 @api.util2.json_route(application, '/world/<world>/sessions/lastseen')
 @api.util2.decode_args
@@ -708,8 +707,8 @@ def api_villages_overworld(world: minecraft.World):
 
 @api.util2.json_route(application, '/world/<world>/whitelist')
 @api.util2.decode_args
-def api_whitelist(world: minecraft.World): #TODO multiworld
-    """For UUID-based worlds (Minecraft 1.7.6 and later), returns the whitelist. For older worlds, the behavior is undefined."""
+def api_whitelist(world: minecraft.World):
+    """Returns the whitelist."""
     with (world.path / 'whitelist.json').open() as whitelist:
         return json.load(whitelist)
 

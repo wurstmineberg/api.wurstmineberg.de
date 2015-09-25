@@ -113,8 +113,8 @@ def api_all_items():
 def api_item_by_damage(item_id, item_damage):
     """Returns the item info for an item with the given numeric or text ID and numeric damage value. Text IDs may use a period instead of a colon to separate the plugin prefix, or omit the prefix entirely if it is “minecraft:”."""
     ret = api_item_by_id(item_id)
-    if 'damageValues' in ret: #TODO 2.0: error if the item has no damage values
-        if str(item_damage) in ret['damageValues']: #TODO 2.0: error if the damage value is not present
+    if 'damageValues' in ret:
+        if str(item_damage) in ret['damageValues']:
             ret.update(ret['damageValues'][str(item_damage)])
         del ret['damageValues']
     return ret
