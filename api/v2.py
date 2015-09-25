@@ -498,7 +498,7 @@ def api_playerstats_items(world: minecraft.World):
 @api.util2.decode_args
 def api_scoreboard(world: minecraft.World):
     """Returns the scoreboard data encoded as JSON"""
-    nbt)file = world.world_path / 'data' / 'scoreboard.dat'
+    nbt_file = world.world_path / 'data' / 'scoreboard.dat'
     return api.util2.nbtfile_to_dict(nbt_file)
 
 @api.util2.json_route(application, '/world/<world>/sessions/lastseen')
