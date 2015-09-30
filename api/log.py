@@ -51,7 +51,7 @@ class Log:
 
     def lines(self, latest_only=False):
         player_uuids = {}
-        for raw_line in self.raw_lines():
+        for raw_line in self.raw_lines(latest_only=latest_only):
             if raw_line == '':
                 continue
             match_prefix = '({}) {} '.format(Regexes.full_timestamp, Regexes.prefix)
