@@ -116,6 +116,13 @@ class Player:
                     if player_path.suffix == '.dat':
                         yield from find(player_path.stem)
 
+    @classmethod
+    def by_minecraft_nick(cls, minecraft_nick, at=None):
+        if at is None:
+            return cls(requests.get('https://api.mojang.com/users/profiles/minecraft/{}'.format(minecraft_nick)).json()['id'])
+        else:
+            return cls(requests.get('https://api.mojang.com/users/profiles/minecraft/{}?at={}'.format(minecraft_nick, at.timestamp())).json()['id'])
+
 def nbtfile_to_dict(filename, *, add_metadata=True):
     """Generates a JSON-serializable value from a path (string or pathlib.Path) representing a NBT file.
 

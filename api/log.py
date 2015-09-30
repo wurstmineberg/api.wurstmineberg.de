@@ -56,7 +56,7 @@ class Log:
             if base_match:
                 # has a well-formatted timestamp, origin thread and log level
                 timestamp, origin_thread, log_level = base_match.group(1, 2, 3)
-                time = datetime.datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
+                time = datetime.datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S').replace(tzinfo=datetime.timezone.utc)
                 if origin_thread == 'Server thread':
                     if log_level == 'INFO':
                         matches = {
@@ -69,7 +69,10 @@ class Log:
                             match = re.fullmatch(match_prefix + match_string, raw_line)
                             if not match:
                                 continue # not the type of message currently being tested for
-                            player = api.util2.Player(player_uuids[match.group(4)])
+                            if match.group(4) in player_uuids:
+                                player = api.util2.Player(player_uuids[match.group(4)])
+                            else:
+                                player = api.util2.Player.by_minecraft_nick(match.group(4), at=time)
                             if match_type == 'achievement':
                                 yield Line(LineType.achievement, time=time, player=player, achievement=match.group(5))
                                 break
