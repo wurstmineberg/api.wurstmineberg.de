@@ -340,7 +340,7 @@ def api_logs_all(world: minecraft.World):
 @api.util2.decode_args
 def api_logs_latest(world: minecraft.World):
     """Returns a JSON-formatted version of the world's latest.log"""
-    for line in api.log.Log(world).lines(latest_only=True):
+    for line in api.log.Log.latest(world):
         yield line.as_json()
 
 @api.util2.json_route(application, '/world/<world>/maps/by-id/<identifier>')
