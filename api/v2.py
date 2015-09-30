@@ -323,13 +323,15 @@ def api_level(world: minecraft.World):
 @api.util2.decode_args
 def api_logs_all(world: minecraft.World):
     """Returns a JSON-formatted version of all available logs for the world. Warning: this file is potentially very big. Please use one of the other APIs if possible."""
-    return [line.as_json() for line in api.log.Log(world).lines()]
+    for line in api.log.Log(world).lines():
+        yield line.as_json()
 
 @api.util2.json_route(application, '/world/<world>/logs/latest')
 @api.util2.decode_args
 def api_logs_latest(world: minecraft.World):
     """Returns a JSON-formatted version of the world's latest.log"""
-    return [line.as_json() for line in api.log.Log(world).lines(latest_only=True)]
+    for line in api.log.Log(world).lines(latest_only=True):
+        yield line.as_json()
 
 @api.util2.json_route(application, '/world/<world>/maps/by-id/<identifier>')
 @api.util2.decode_args
@@ -689,7 +691,8 @@ def api_whitelist(world: minecraft.World):
 @api.util2.json_route(application, '/server/players')
 def api_player_ids():
     """Returns an array of all known player IDs (Wurstmineberg IDs and Minecraft UUIDs)"""
-    return [str(player) for player in api.util2.Player.all()]
+    for player in api.util2.Player.all():
+        yield str(player)
 
 @api.util2.json_route(application, '/server/sessions/lastseen')
 def api_sessions_last_seen_all(): #TODO multiworld

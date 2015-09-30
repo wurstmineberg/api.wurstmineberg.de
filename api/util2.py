@@ -13,6 +13,7 @@ import re
 import requests
 import time
 import tempfile
+import types
 import uuid
 
 class Player:
@@ -317,7 +318,23 @@ def json_route(app, route):
         @functools.wraps(f)
         def json_encoded(*args, **kwargs):
             bottle.response.content_type = 'application/json'
-            return json.dumps(f(*args, **kwargs), sort_keys=True, indent=4)
+            result = f(*args, **kwargs)
+            if isinstance(result, types.GeneratorType):
+                empty = True
+                for value in result:
+                    if empty:
+                        yield '['
+                        empty = False
+                    else:
+                        yield ','
+                    yield '\n    '
+                    yield '\n    '.join(json.dumps(value, sort_keys=True, indent=4).split('\n'))
+                if empty:
+                    yield '[]\n'
+                else:
+                    yield '\n]\n'
+            else:
+                yield json.dumps(result, sort_keys=True, indent=4)
 
         pass #TODO add HTML view endpoint
         return f
