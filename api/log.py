@@ -32,7 +32,7 @@ class Line:
                 return value
             return repr(value)
 
-        result = {'type': str(self.type)}
+        result = {'type': self.type.name}
         result.update({key: value_as_json(value) for key, value in self.data.items()})
         return result
 
