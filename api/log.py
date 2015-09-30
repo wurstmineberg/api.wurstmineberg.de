@@ -105,7 +105,19 @@ class Log:
 
     def raw_lines(self, latest_only=False):
         if not latest_only:
-            pass #TODO read old logs
+            if (self.world.path / 'server.log').exists():
+                with (self.world.path / 'server.log').open() as log:
+                    lines = log.read().split('\n')
+                    yield from lines[:-1]
+            for log_path in sorted((self.world.path / 'logs').iterdir()):
+                if log_path.name != 'latest.log':
+                    if log_path.suffix == '.gz':
+                        open_func = lambda path: gzip.open(str(path))
+                    else:
+                        open_func = lambda path: path.open()
+                    with open_func(log_path) as log:
+                        lines = log.read().split('\n')
+                        yield from lines[:-1]
         log_path = self.world.path / 'logs' / 'latest.log'
         with log_path.open() as log:
             lines = log.read().split('\n')
