@@ -52,10 +52,10 @@ class Log:
         player_uuids = {}
         for raw_line in self.raw_lines():
             match_prefix = '({}) {} '.format(Regexes.full_timestamp, Regexes.prefix)
-            base_match = re.match(match_prefix, raw_line)
+            base_match = re.fullmatch(match_prefix + '(.*)', raw_line)
             if base_match:
                 # has a well-formatted timestamp, origin thread and log level
-                timestamp, origin_thread, log_level = base_match.group(1, 2, 3)
+                timestamp, origin_thread, log_level, text = base_match.group(1, 2, 3, 4)
                 time = datetime.datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S').replace(tzinfo=datetime.timezone.utc)
                 if origin_thread == 'Server thread':
                     if log_level == 'INFO':
@@ -86,20 +86,20 @@ class Log:
                                 yield Line(LineType.join if match.group(5) == 'joined' else LineType.leave, time=time, player=player)
                                 break
                         else:
-                            yield Line(LineType.unknown, time=time, origin_thread=origin_thread, log_level=log_level)
+                            yield Line(LineType.unknown, time=time, origin_thread=origin_thread, log_level=log_level, text=text)
                     else:
-                        yield Line(LineType.unknown, time=time, origin_thread=origin_thread, log_level=log_level)
+                        yield Line(LineType.unknown, time=time, origin_thread=origin_thread, log_level=log_level, text=text)
                 elif origin_thread.startswith('User Authenticator'):
                     if log_level == 'INFO':
                         match = re.fullmatch(match_prefix + 'UUID of player ({}) is ({})'.format(Regexes.minecraft_nick, Regexes.uuid), raw_line)
                         if match:
                             player_uuids[match.group(4)] = uuid.UUID(match.group(5))
                         else:
-                            yield Line(LineType.unknown, time=time, origin_thread=origin_thread, log_level=log_level)
+                            yield Line(LineType.unknown, time=time, origin_thread=origin_thread, log_level=log_level, text=text)
                     else:
-                        yield Line(LineType.unknown, time=time, origin_thread=origin_thread, log_level=log_level)
+                        yield Line(LineType.unknown, time=time, origin_thread=origin_thread, log_level=log_level, text=text)
                 else:
-                    yield Line(LineType.unknown, time=time, origin_thread=origin_thread, log_level=log_level)
+                    yield Line(LineType.unknown, time=time, origin_thread=origin_thread, log_level=log_level, text=text)
             else:
                 yield Line(LineType.gibberish, text=raw_line)
 
