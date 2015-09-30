@@ -319,6 +319,12 @@ def api_level(world: minecraft.World):
     nbt_file = world.world_path / 'level.dat'
     return api.util2.nbtfile_to_dict(nbt_file)
 
+@api.util2.json_route(application, '/world/<world>/logs/all')
+@api.util2.decode_args
+def api_logs_all(world: minecraft.World):
+    """Returns a JSON-formatted version of all available logs for the world. Warning: this file is potentially very big. Please use one of the other APIs if possible."""
+    return [line.as_json() for line in api.log.Log(world).lines()]
+
 @api.util2.json_route(application, '/world/<world>/logs/latest')
 @api.util2.decode_args
 def api_logs_latest(world: minecraft.World):
