@@ -19,6 +19,7 @@ import time
 import uuid
 import xml.sax.saxutils
 
+import api.log
 import api.util
 import api.util2
 
@@ -316,6 +317,12 @@ def api_level(world: minecraft.World):
     """Returns the level.dat encoded as JSON"""
     nbt_file = world.world_path / 'level.dat'
     return api.util2.nbtfile_to_dict(nbt_file)
+
+@api.util2.json_route(application, '/world/<world>/logs/latest')
+@api.util2.decode_args
+def api_logs_latest(world: minecraft.World):
+    """Returns a JSON-formatted version of the world's latest.log"""
+    return [line.as_json() for line in api.log.Log(world).lines(latest_only=True)]
 
 @api.util2.json_route(application, '/world/<world>/maps/by-id/<identifier>')
 @api.util2.decode_args
