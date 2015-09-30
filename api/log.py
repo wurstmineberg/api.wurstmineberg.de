@@ -45,6 +45,9 @@ class Log:
             raise TypeError('Invalid world type')
 
     def __iter__(self):
+        return self.lines()
+
+    def lines(self, latest_only=False):
         player_uuids = {}
         for raw_line in self.raw_lines():
             match_prefix = '({}) {} '.format(Regexes.full_timestamp, Regexes.prefix)
@@ -96,8 +99,9 @@ class Log:
             else:
                 yield Line(LineType.gibberish, text=raw_line)
 
-    def raw_lines(self):
-        pass #TODO read old logs
+    def raw_lines(self, latest_only=False):
+        if not latest_only:
+            pass #TODO read old logs
         log_path = self.world.path / 'logs' / 'latest.log'
         with log_path.open() as log:
             lines = log.read().split('\n')
