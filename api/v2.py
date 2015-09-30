@@ -9,6 +9,7 @@ import hashlib
 import io
 import json
 import minecraft
+import more_itertools
 import nbt.nbt
 import os
 import os.path
@@ -159,7 +160,7 @@ def api_item_render_dyed_png(plugin, item_id, color: 'color'):
 @api.util2.decode_args
 def api_achievement_scores(world: minecraft.World):
     """Returns an object mapping player's IDs to their current score in the achievement run."""
-    raise NotImplementedError('achievement run endpoints NYI') #TODO (requires log parsing)
+    return {player_id: more_itertools.quantify((value['value'] if isinstance(value, dict) else value) > 0 for value in achievement_data.values()) for player_id, achievement_data in api_playerstats_achievements(world).items()}
 
 @api.util2.json_route(application, '/minigame/achievements/<world>/winners')
 @api.util2.decode_args

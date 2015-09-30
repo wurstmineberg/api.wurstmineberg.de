@@ -12,6 +12,7 @@ Requirements
 *   [anvil](https://github.com/wurstmineberg/anvil) (required for chunk endpoints only)
 *   [bottle](http://bottlepy.org/) 0.12
 *   [mcstatus](https://github.com/Dinnerbone/mcstatus) (required for world status endpoints only)
+*   [more-itertools](https://pypi.python.org/pypi/more-itertools/)
 *   [nbt](https://pypi.python.org/pypi/NBT) 1.4
 *   [people](https://github.com/wurstmineberg/people) (required for people.json features only)
 *   [playerhead](https://github.com/wurstmineberg/playerhead) 3.0 (required for skin rendering endpoints only)
