@@ -1,6 +1,7 @@
 import datetime
 import enum
 import minecraft
+import re
 import uuid
 
 import api.util
@@ -55,7 +56,7 @@ class Log:
             if base_match:
                 # has a well-formatted timestamp, origin thread and log level
                 timestamp, origin_thread, log_level = base_match.group(1, 2, 3)
-                time = datetime.datetime.strptime(time, '%Y-%m-%d %H:%M:%S')
+                time = datetime.datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
                 if origin_thread == 'Server thread':
                     if log_level == 'INFO':
                         matches = {
@@ -65,7 +66,7 @@ class Log:
                             'join_leave': '(' + Regexes.minecraft_nick + ') (joined|left) the game'
                         }
                         for match_type, match_string in matches.items():
-                            match = re.full_match(match_prefix + match_string, raw_line)
+                            match = re.fullmatch(match_prefix + match_string, raw_line)
                             if not match:
                                 continue # not the type of message currently being tested for
                             player = api.util2.Player(player_uuids[match.group(4)])
@@ -87,7 +88,7 @@ class Log:
                         yield Line(LineType.unknown, time=time, origin_thread=origin_thread, log_level=log_level)
                 elif origin_thread.startswith('User Authenticator'):
                     if log_level == 'INFO':
-                        match = re.full_match(match_prefix + 'UUID of player ({}) is ({})'.format(Regexes.minecraft_nick, Regexes.uuid), raw_line)
+                        match = re.fullmatch(match_prefix + 'UUID of player ({}) is ({})'.format(Regexes.minecraft_nick, Regexes.uuid), raw_line)
                         if match:
                             player_uuids[match.group(4)] = uuid.UUID(match.group(5))
                         else:
