@@ -121,7 +121,7 @@ class Player:
         if at is None:
             return cls(requests.get('https://api.mojang.com/users/profiles/minecraft/{}'.format(minecraft_nick)).json()['id'])
         else:
-            return cls(requests.get('https://api.mojang.com/users/profiles/minecraft/{}?at={}'.format(minecraft_nick, at.timestamp())).json()['id'])
+            return cls(requests.get('https://api.mojang.com/users/profiles/minecraft/{}?at={}'.format(minecraft_nick, int(at.timestamp()))).json()['id'])
 
 def nbtfile_to_dict(filename, *, add_metadata=True):
     """Generates a JSON-serializable value from a path (string or pathlib.Path) representing a NBT file.
