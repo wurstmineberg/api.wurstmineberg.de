@@ -46,7 +46,7 @@ class Log:
         else:
             raise TypeError('Invalid world type')
         self.log_files = files
-        self.reversed = reversed
+        self.is_reversed = reversed
 
     def __iter__(self):
         def iter_file(log_file):
@@ -107,17 +107,17 @@ class Log:
                     yield Line(LineType.gibberish, text=raw_line)
 
         for log_file in self.files:
-            if self.reversed:
+            if self.is_reversed:
                 yield from reversed(list(iter_file(log_file)))
             else:
                 yield from iter_file(log_file)
 
-    def __reversed__(self):
-        return self.__class__(self.world, files=reversed(self.files), reversed=not self.reversed)
+    def reversed(self):
+        return self.__class__(self.world, files=reversed(self.files), reversed=not self.is_reversed)
 
     @property
     def files(self):
-        if self.log_files is not None:
+        if self.log_files is None:
             self.log_files = []
             if (self.world.path / 'server.log').exists():
                 self.log_files.append(self.world.path / 'server.log')
@@ -125,11 +125,11 @@ class Log:
                 if log_path.name != 'latest.log':
                     self.log_files.append(log_path)
             self.log_files.append(self.world.path / 'logs' / 'latest.log')
-        yield from self.log_files
+        return self.log_files
 
     @classmethod
     def latest(cls, world):
-        return cls(world, files=(world.path / 'logs' / 'latest.log'))
+        return cls(world, files=[world.path / 'logs' / 'latest.log'])
 
     def raw_lines(self, files=None, *, yield_reversed=None):
         if files is None:
@@ -137,7 +137,7 @@ class Log:
         elif isinstance(files, pathlib.Path):
             files = [files]
         if yield_reversed is None:
-            yield_reversed = self.reversed
+            yield_reversed = self.is_reversed
         for log_path in files:
             if log_path.name != 'latest.log':
                 if log_path.suffix == '.gz':

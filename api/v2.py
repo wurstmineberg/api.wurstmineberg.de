@@ -170,7 +170,7 @@ def api_achievement_winners(world: minecraft.World):
         num_achievements = len(json.load(achievements_f))
     winners = {api.util2.Player(player) for player, score in api_achievement_scores(world).items() if score == num_achievements}
     result = []
-    for line in reversed(api.log.Log(world)):
+    for line in api.log.Log(world).reversed():
         if line.type is api.log.LineType.achievement and line.data['player'] in winners:
             result.insert(0, str(line.data['player']))
             winners.remove(line.data['player'])
