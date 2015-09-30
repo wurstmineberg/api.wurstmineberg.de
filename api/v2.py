@@ -166,7 +166,17 @@ def api_achievement_scores(world: minecraft.World):
 @api.util2.decode_args
 def api_achievement_winners(world: minecraft.World):
     """Returns an array of IDs of all players who have completed all achievements, ordered chronologically by the time they got their last achievement. This list is emptied each time a new achievement is added to Minecraft."""
-    raise NotImplementedError('achievement run endpoints NYI') #TODO (requires log parsing)
+    with (api.util.CONFIG['webAssets'] / 'json' / 'achievements.json').open() as achievements_f:
+        num_achievements = len(json.load(achievements_f))
+    winners = {api.util2.Player(player) for player, score in api_achievement_scores(world).items() if score == num_achievements}
+    result = []
+    for line in reversed(api.log.Log(world)):
+        if line.type is api.log.LineType.achievement and line.data['player'] in winners:
+            result.insert(0, str(line.data['player']))
+            winners.remove(line.data['player'])
+            if len(winners) == 0:
+                break
+    return result
 
 @api.util2.json_route(application, '/minigame/deathgames/log')
 def api_death_games_log():
@@ -323,7 +333,7 @@ def api_level(world: minecraft.World):
 @api.util2.decode_args
 def api_logs_all(world: minecraft.World):
     """Returns a JSON-formatted version of all available logs for the world. Warning: this file is potentially very big. Please use one of the other APIs if possible."""
-    for line in api.log.Log(world).lines():
+    for line in api.log.Log(world):
         yield line.as_json()
 
 @api.util2.json_route(application, '/world/<world>/logs/latest')

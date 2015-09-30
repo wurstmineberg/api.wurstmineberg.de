@@ -128,6 +128,35 @@ class Log:
             for line in log:
                 yield line.rstrip('\r\n')
 
+    def __reversed__(self):
+        return ReversedLog(self.world)
+
+class ReversedLog(Log):
+    def raw_lines(self, latest_only=False):
+        log_path = self.world.path / 'logs' / 'latest.log'
+        with log_path.open() as log:
+            for line in reversed(list(log)):
+                yield line.rstrip('\r\n')
+        if not latest_only:
+            for log_path in reversed(sorted((self.world.path / 'logs').iterdir())):
+                if log_path.name != 'latest.log':
+                    if log_path.suffix == '.gz':
+                        open_func = lambda path: gzip.open(str(path))
+                    else:
+                        open_func = lambda path: path.open()
+                    with open_func(log_path) as log:
+                        for line in reversed(list(log)):
+                            if not isinstance(line, str):
+                                line = line.decode('utf-8')
+                            yield line.rstrip('\r\n')
+            if (self.world.path / 'server.log').exists():
+                with (self.world.path / 'server.log').open() as log:
+                    for line in reversed(list(log)):
+                        yield line.rstrip('\r\n')
+
+    def __reversed__(self):
+        return Log(self.world)
+
 class Regexes:
     full_timestamp = '[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}'
     minecraft_nick = '[A-Za-z0-9_]{1,16}'
