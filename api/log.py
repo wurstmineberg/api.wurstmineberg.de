@@ -1,5 +1,6 @@
 import datetime
 import enum
+import gzip
 import minecraft
 import re
 import uuid
