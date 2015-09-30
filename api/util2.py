@@ -17,7 +17,7 @@ import uuid
 
 class Player:
     def __init__(self, player_id):
-        if re.fullmatch('[a-z][0-9a-z]{1,15}', player_id):
+        if isinstance(player_id, str) and re.fullmatch('[a-z][0-9a-z]{1,15}', player_id):
             import people
 
             db = people.get_people_db()
