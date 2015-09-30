@@ -52,6 +52,8 @@ class Log:
     def lines(self, latest_only=False):
         player_uuids = {}
         for raw_line in self.raw_lines():
+            if raw_line == '':
+                continue
             match_prefix = '({}) {} '.format(Regexes.full_timestamp, Regexes.prefix)
             base_match = re.fullmatch(match_prefix + '(.*)', raw_line)
             if base_match:
@@ -108,8 +110,8 @@ class Log:
         if not latest_only:
             if (self.world.path / 'server.log').exists():
                 with (self.world.path / 'server.log').open() as log:
-                    lines = log.read().split('\n')
-                    yield from lines[:-1]
+                    for line in log:
+                        yield line.rstrip('\r\n')
             for log_path in sorted((self.world.path / 'logs').iterdir()):
                 if log_path.name != 'latest.log':
                     if log_path.suffix == '.gz':
@@ -117,12 +119,14 @@ class Log:
                     else:
                         open_func = lambda path: path.open()
                     with open_func(log_path) as log:
-                        lines = log.read().split('\n')
-                        yield from lines[:-1]
+                        for line in log:
+                            if not isinstance(line, str):
+                                line = line.decode('utf-8')
+                            yield line.rstrip('\r\n')
         log_path = self.world.path / 'logs' / 'latest.log'
         with log_path.open() as log:
-            lines = log.read().split('\n')
-            yield from lines[:-1]
+            for line in log:
+                yield line.rstrip('\r\n')
 
 class Regexes:
     full_timestamp = '[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}'
