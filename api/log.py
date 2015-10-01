@@ -2,6 +2,7 @@ import datetime
 import enum
 import gzip
 import minecraft
+import pathlib
 import re
 import uuid
 
