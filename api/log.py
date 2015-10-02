@@ -110,9 +110,9 @@ class Log:
                         yield Line(LineType.unknown, time=time, origin_thread=origin_thread, log_level=log_level, text=text)
                 elif origin_thread.startswith('User Authenticator'):
                     if log_level == 'INFO':
-                        match = re.fullmatch(match_prefix + 'UUID of player ({}) is ({})'.format(Regexes.minecraft_nick, Regexes.uuid), raw_line)
+                        match = re.fullmatch('UUID of player ({}) is ({})'.format(Regexes.minecraft_nick, Regexes.uuid), text)
                         if match:
-                            player_uuids[match.group(4)] = api.util2.Player(match.group(5))
+                            player_uuids[match.group(1)] = api.util2.Player(match.group(2))
                         else:
                             yield Line(LineType.unknown, time=time, origin_thread=origin_thread, log_level=log_level, text=text)
                     else:
