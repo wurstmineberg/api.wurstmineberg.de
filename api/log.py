@@ -26,8 +26,12 @@ class Line:
 
     def as_json(self):
         def value_as_json(value):
+            if value is None:
+                return value
             if isinstance(value, api.util2.Player):
                 return str(value)
+            if isinstance(value, bool):
+                return value
             if isinstance(value, datetime.datetime):
                 return value.strftime('%Y-%m-%d %H:%M:%S')
             if isinstance(value, str):
@@ -57,11 +61,11 @@ class Log:
             for raw_line in self.raw_lines(log_file, yield_reversed=False):
                 if raw_line == '':
                     continue
-                prefixes = {
-                    'old': Regexes.old_prefix,
-                    'full': Regexes.full_prefix
-                }
-                for prefix_type, prefix_string in prefixes.items():
+                prefixes = [
+                    ('full', Regexes.full_prefix),
+                    ('old', Regexes.old_prefix)
+                ]
+                for prefix_type, prefix_string in prefixes:
                     match_prefix = '({}) {} (.*)'.format(Regexes.full_timestamp, prefix_string)
                     base_match = re.fullmatch(match_prefix, raw_line)
                     if not base_match:
