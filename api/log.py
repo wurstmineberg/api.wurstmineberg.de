@@ -58,8 +58,11 @@ class Log:
         self.is_reversed = reversed
 
     def __iter__(self):
+        player_uuids = {}
+
         def iter_file(log_file):
-            player_uuids = {}
+            if self.is_reversed:
+                player_uuids = {}
             for raw_line in self.raw_lines(log_file, yield_reversed=False):
                 if raw_line == '':
                     continue
@@ -68,7 +71,7 @@ class Log:
                     ('old', Regexes.old_prefix)
                 ]
                 for prefix_type, prefix_string in prefixes:
-                    match_prefix = '({}) {} (.*)'.format(Regexes.full_timestamp, prefix_string)
+                    match_prefix = '({}) {} (.*)'.format(Regexes.timestamp, prefix_string)
                     base_match = re.fullmatch(match_prefix, raw_line)
                     if not base_match:
                         continue
@@ -173,8 +176,7 @@ class Log:
 
 class Regexes:
     full_prefix = '\\[(.+?)/(.+?)\\]:?'
-    full_timestamp = '[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}'
+    timestamp = '[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}'
     minecraft_nick = '[A-Za-z0-9_]{1,16}'
     old_prefix = '\\[(.+?)\\]:?'
-    old_timestamp = '\\[[0-9]{2}:[0-9]{2}:[0-9]{2}\\]'
     uuid = '[0-9A-Fa-f]{8}-?[0-9A-Fa-f]{4}-?[0-9A-Fa-f]{4}-?[0-9A-Fa-f]{4}-?[0-9A-Fa-f]{12}'
