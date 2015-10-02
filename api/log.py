@@ -39,7 +39,9 @@ class Line:
         return result
 
 class Log:
-    def __init__(self, world, *, files=None, reversed=False):
+    def __init__(self, world=None, *, files=None, reversed=False):
+        if world is None:
+            world = minecraft.World()
         if isinstance(world, str):
             world = minecraft.World(world)
         if isinstance(world, minecraft.World):
@@ -129,7 +131,9 @@ class Log:
         return self.log_files
 
     @classmethod
-    def latest(cls, world):
+    def latest(cls, world=None):
+        if world is None:
+            world = minecraft.World()
         return cls(world, files=[world.path / 'logs' / 'latest.log'])
 
     def raw_lines(self, files=None, *, yield_reversed=None):
@@ -140,16 +144,15 @@ class Log:
         if yield_reversed is None:
             yield_reversed = self.is_reversed
         for log_path in files:
-            if log_path.name != 'latest.log':
-                if log_path.suffix == '.gz':
-                    open_func = lambda path: gzip.open(str(path))
-                else:
-                    open_func = lambda path: path.open()
-                with open_func(log_path) as log:
-                    for line in (reversed(list(log)) if yield_reversed else log):
-                        if not isinstance(line, str):
-                            line = line.decode('utf-8')
-                        yield line.rstrip('\r\n')
+            if log_path.suffix == '.gz':
+                open_func = lambda path: gzip.open(str(path))
+            else:
+                open_func = lambda path: path.open()
+            with open_func(log_path) as log:
+                for line in (reversed(list(log)) if yield_reversed else log):
+                    if not isinstance(line, str):
+                        line = line.decode('utf-8')
+                    yield line.rstrip('\r\n')
 
 class Regexes:
     full_timestamp = '[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}'
