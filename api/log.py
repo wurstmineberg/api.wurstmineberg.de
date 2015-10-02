@@ -70,6 +70,7 @@ class Log:
                         # has a well-formatted timestamp and log level, but no origin thread
                         timestamp, log_level, text = base_match.group(1, 2, 3)
                         origin_thread = None
+                        time = datetime.datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S').replace(tzinfo=datetime.timezone.utc)
                     else:
                         yield Line(LineType.gibberish, text=raw_line)
                         continue
