@@ -57,57 +57,65 @@ class Log:
             for raw_line in self.raw_lines(log_file, yield_reversed=False):
                 if raw_line == '':
                     continue
-                match_prefix = '({}) {} '.format(Regexes.full_timestamp, Regexes.prefix)
+                match_prefix = '({}) {} '.format(Regexes.full_timestamp, Regexes.full_prefix)
                 base_match = re.fullmatch(match_prefix + '(.*)', raw_line)
                 if base_match:
                     # has a well-formatted timestamp, origin thread and log level
                     timestamp, origin_thread, log_level, text = base_match.group(1, 2, 3, 4)
                     time = datetime.datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S').replace(tzinfo=datetime.timezone.utc)
-                    if origin_thread == 'Server thread':
-                        if log_level == 'INFO':
-                            matches = {
-                                'achievement': '(' + Regexes.minecraft_nick + ') has just earned the achievement \\[(.+)\\]',
-                                'chat_action': '\\* (' + Regexes.minecraft_nick + ') (.*)',
-                                'chat_message': '<(' + Regexes.minecraft_nick + ')> (.*)',
-                                'join_leave': '(' + Regexes.minecraft_nick + ') (joined|left) the game'
-                            }
-                            for match_type, match_string in matches.items():
-                                match = re.fullmatch(match_prefix + match_string, raw_line)
-                                if not match:
-                                    continue # not the type of message currently being tested for
-                                if match.group(4) in player_uuids:
-                                    player = player_uuids[match.group(4)]
-                                else:
-                                    player = player_uuids[match.group(4)] = api.util2.Player.by_minecraft_nick(match.group(4), at=time)
-                                if match_type == 'achievement':
-                                    yield Line(LineType.achievement, time=time, player=player, achievement=match.group(5))
-                                    break
-                                elif match_type == 'chat_action':
-                                    yield Line(LineType.chat_action, time=time, player=player, message=match.group(5))
-                                    break
-                                elif match_type == 'chat_message':
-                                    yield Line(LineType.chat_message, time=time, player=player, message=match.group(5))
-                                    break
-                                elif match_type == 'join_leave':
-                                    yield Line(LineType.join if match.group(5) == 'joined' else LineType.leave, time=time, player=player)
-                                    break
+                else:
+                    match_prefix = '({}) {} '.format(Regexes.full_timestamp, Regexes.old_prefix)
+                    base_match = re.fullmatch(match_prefix + '(.*)', raw_line)
+                    if base_match:
+                        # has a well-formatted timestamp and log level, but no origin thread
+                        timestamp, log_level, text = base_match.group(1, 2, 3)
+                        origin_thread = None
+                    else:
+                        yield Line(LineType.gibberish, text=raw_line)
+                        continue
+                if origin_thread == 'Server thread' or origin_thread is None:
+                    if log_level == 'INFO':
+                        matches = {
+                            'achievement': '(' + Regexes.minecraft_nick + ') has just earned the achievement \\[(.+)\\]',
+                            'chat_action': '\\* (' + Regexes.minecraft_nick + ') (.*)',
+                            'chat_message': '<(' + Regexes.minecraft_nick + ')> (.*)',
+                            'join_leave': '(' + Regexes.minecraft_nick + ') (joined|left) the game'
+                        }
+                        for match_type, match_string in matches.items():
+                            match = re.fullmatch(match_prefix + match_string, raw_line)
+                            if not match:
+                                continue # not the type of message currently being tested for
+                            if match.group(4) in player_uuids:
+                                player = player_uuids[match.group(4)]
                             else:
-                                yield Line(LineType.unknown, time=time, origin_thread=origin_thread, log_level=log_level, text=text)
+                                player = player_uuids[match.group(4)] = api.util2.Player.by_minecraft_nick(match.group(4), at=time)
+                            if match_type == 'achievement':
+                                yield Line(LineType.achievement, time=time, player=player, achievement=match.group(5))
+                                break
+                            elif match_type == 'chat_action':
+                                yield Line(LineType.chat_action, time=time, player=player, message=match.group(5))
+                                break
+                            elif match_type == 'chat_message':
+                                yield Line(LineType.chat_message, time=time, player=player, message=match.group(5))
+                                break
+                            elif match_type == 'join_leave':
+                                yield Line(LineType.join if match.group(5) == 'joined' else LineType.leave, time=time, player=player)
+                                break
                         else:
                             yield Line(LineType.unknown, time=time, origin_thread=origin_thread, log_level=log_level, text=text)
-                    elif origin_thread.startswith('User Authenticator'):
-                        if log_level == 'INFO':
-                            match = re.fullmatch(match_prefix + 'UUID of player ({}) is ({})'.format(Regexes.minecraft_nick, Regexes.uuid), raw_line)
-                            if match:
-                                player_uuids[match.group(4)] = api.util2.Player(match.group(5))
-                            else:
-                                yield Line(LineType.unknown, time=time, origin_thread=origin_thread, log_level=log_level, text=text)
+                    else:
+                        yield Line(LineType.unknown, time=time, origin_thread=origin_thread, log_level=log_level, text=text)
+                elif origin_thread.startswith('User Authenticator'):
+                    if log_level == 'INFO':
+                        match = re.fullmatch(match_prefix + 'UUID of player ({}) is ({})'.format(Regexes.minecraft_nick, Regexes.uuid), raw_line)
+                        if match:
+                            player_uuids[match.group(4)] = api.util2.Player(match.group(5))
                         else:
                             yield Line(LineType.unknown, time=time, origin_thread=origin_thread, log_level=log_level, text=text)
                     else:
                         yield Line(LineType.unknown, time=time, origin_thread=origin_thread, log_level=log_level, text=text)
                 else:
-                    yield Line(LineType.gibberish, text=raw_line)
+                    yield Line(LineType.unknown, time=time, origin_thread=origin_thread, log_level=log_level, text=text)
 
         for log_file in self.files:
             if self.is_reversed:
@@ -155,8 +163,9 @@ class Log:
                     yield line.rstrip('\r\n')
 
 class Regexes:
+    full_prefix = '\\[(.+?)/(.+?)\\]:?'
     full_timestamp = '[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}'
     minecraft_nick = '[A-Za-z0-9_]{1,16}'
+    old_prefix = '\\[(.+?)\\]:?'
     old_timestamp = '\\[[0-9]{2}:[0-9]{2}:[0-9]{2}\\]'
-    prefix = '\\[(.+?)/(.+?)\\]:?'
     uuid = '[0-9A-Fa-f]{8}-?[0-9A-Fa-f]{4}-?[0-9A-Fa-f]{4}-?[0-9A-Fa-f]{4}-?[0-9A-Fa-f]{12}'
