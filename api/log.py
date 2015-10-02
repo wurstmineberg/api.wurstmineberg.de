@@ -57,23 +57,28 @@ class Log:
             for raw_line in self.raw_lines(log_file, yield_reversed=False):
                 if raw_line == '':
                     continue
-                match_prefix = '({}) {} '.format(Regexes.full_timestamp, Regexes.full_prefix)
-                base_match = re.fullmatch(match_prefix + '(.*)', raw_line)
-                if base_match:
-                    # has a well-formatted timestamp, origin thread and log level
-                    timestamp, origin_thread, log_level, text = base_match.group(1, 2, 3, 4)
-                    time = datetime.datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S').replace(tzinfo=datetime.timezone.utc)
-                else:
-                    match_prefix = '({}) {} '.format(Regexes.full_timestamp, Regexes.old_prefix)
-                    base_match = re.fullmatch(match_prefix + '(.*)', raw_line)
-                    if base_match:
+                prefixes = {
+                    'old': Regexes.old_prefix,
+                    'full': Regexes.full_prefix
+                }
+                for prefix_type, prefix_string in prefixes.items():
+                    match_prefix = '({}) {} (.*)'.format(Regexes.full_timestamp, prefix_string)
+                    base_match = re.fullmatch(match_prefix, raw_line)
+                    if not base_match:
+                        continue
+                    if prefix_type == 'full':
+                        # has a well-formatted timestamp, origin thread and log level
+                        timestamp, origin_thread, log_level, text = base_match.group(1, 2, 3, 4)
+                        time = datetime.datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S').replace(tzinfo=datetime.timezone.utc)
+                    elif prefix_type == 'old':
                         # has a well-formatted timestamp and log level, but no origin thread
                         timestamp, log_level, text = base_match.group(1, 2, 3)
                         origin_thread = None
                         time = datetime.datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S').replace(tzinfo=datetime.timezone.utc)
-                    else:
-                        yield Line(LineType.gibberish, text=raw_line)
-                        continue
+                    break
+                else:
+                    yield Line(LineType.gibberish, text=raw_line)
+                    continue
                 if origin_thread == 'Server thread' or origin_thread is None:
                     if log_level == 'INFO':
                         matches = {
@@ -83,25 +88,22 @@ class Log:
                             'join_leave': '(' + Regexes.minecraft_nick + ') (joined|left) the game'
                         }
                         for match_type, match_string in matches.items():
-                            match = re.fullmatch(match_prefix + match_string, raw_line)
+                            match = re.fullmatch(match_string, text)
                             if not match:
                                 continue # not the type of message currently being tested for
-                            if match.group(4) in player_uuids:
-                                player = player_uuids[match.group(4)]
+                            if match.group(1) in player_uuids:
+                                player = player_uuids[match.group(1)]
                             else:
-                                player = player_uuids[match.group(4)] = api.util2.Player.by_minecraft_nick(match.group(4), at=time)
+                                player = player_uuids[match.group(1)] = api.util2.Player.by_minecraft_nick(match.group(1), at=time)
                             if match_type == 'achievement':
-                                yield Line(LineType.achievement, time=time, player=player, achievement=match.group(5))
-                                break
+                                yield Line(LineType.achievement, time=time, player=player, achievement=match.group(2))
                             elif match_type == 'chat_action':
-                                yield Line(LineType.chat_action, time=time, player=player, message=match.group(5))
-                                break
+                                yield Line(LineType.chat_action, time=time, player=player, message=match.group(2))
                             elif match_type == 'chat_message':
-                                yield Line(LineType.chat_message, time=time, player=player, message=match.group(5))
-                                break
+                                yield Line(LineType.chat_message, time=time, player=player, message=match.group(2))
                             elif match_type == 'join_leave':
-                                yield Line(LineType.join if match.group(5) == 'joined' else LineType.leave, time=time, player=player)
-                                break
+                                yield Line(LineType.join if match.group(2) == 'joined' else LineType.leave, time=time, player=player)
+                            break
                         else:
                             yield Line(LineType.unknown, time=time, origin_thread=origin_thread, log_level=log_level, text=text)
                     else:
