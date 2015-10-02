@@ -58,10 +58,8 @@ class Log:
         self.is_reversed = reversed
 
     def __iter__(self):
-        player_uuids = {}
-
-        def iter_file(log_file):
-            if self.is_reversed:
+        def iter_file(log_file, player_uuids=None):
+            if player_uuids is None:
                 player_uuids = {}
             for raw_line in self.raw_lines(log_file, yield_reversed=False):
                 if raw_line == '':
@@ -133,7 +131,8 @@ class Log:
             if self.is_reversed:
                 yield from reversed(list(iter_file(log_file)))
             else:
-                yield from iter_file(log_file)
+                player_uuids = {}
+                yield from iter_file(log_file, player_uuids=player_uuids)
 
     def reversed(self):
         return self.__class__(self.world, files=reversed(self.files), reversed=not self.is_reversed)
