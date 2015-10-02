@@ -13,7 +13,7 @@ LineType = enum.Enum('LineType', [
     'achievement', # player earns an achievement
     'chat_action', # /me
     'chat_message',
-    'gibberish', # cannot parse timestamp, origin thread, and/or log level
+    'gibberish', # cannot parse prefix
     'join', # player joins the game
     'leave', # player leaves the game
     'unknown' # can parse timestamp, origin thread, and log level, but the rest of the message is not in a known format
@@ -34,6 +34,8 @@ class Line:
                 return value
             if isinstance(value, datetime.datetime):
                 return value.strftime('%Y-%m-%d %H:%M:%S')
+            if isinstance(value, pathlib.Path):
+                return str(value)
             if isinstance(value, str):
                 return value
             return repr(value)
@@ -81,7 +83,7 @@ class Log:
                         time = datetime.datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S').replace(tzinfo=datetime.timezone.utc)
                     break
                 else:
-                    yield Line(LineType.gibberish, text=raw_line)
+                    yield Line(LineType.gibberish, path=log_file, text=raw_line)
                     continue
                 if origin_thread == 'Server thread' or origin_thread is None:
                     if log_level == 'INFO':
