@@ -165,14 +165,14 @@ def api_achievement_scores(world: minecraft.World):
 @api.util2.json_route(application, '/minigame/achievements/<world>/winners')
 @api.util2.decode_args
 def api_achievement_winners(world: minecraft.World):
-    """Returns an array of IDs of all players who have completed all achievements, ordered chronologically by the time they got their last achievement. This list is emptied each time a new achievement is added to Minecraft."""
+    """Returns an object mapping IDs of players who have completed all achievements to the UTC datetime they got their last achievement. This list is emptied each time a new achievement is added to Minecraft."""
     with (api.util.CONFIG['webAssets'] / 'json' / 'achievements.json').open() as achievements_f:
         num_achievements = len(json.load(achievements_f))
     winners = {api.util2.Player(player) for player, score in api_achievement_scores(world).items() if score == num_achievements}
-    result = []
+    result = {}
     for line in api.log.Log(world).reversed():
         if line.type is api.log.LineType.achievement and line.data['player'] in winners:
-            result.insert(0, str(line.data['player']))
+            result[str(line.data['player'])] = line.data['time'].strftime('%Y-%m-%d %H:%M:%S')
             winners.remove(line.data['player'])
             if len(winners) == 0:
                 break
