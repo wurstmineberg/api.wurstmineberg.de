@@ -338,10 +338,10 @@ def api_latest_deaths(world: minecraft.World):
             json.dump(result, cache_f, sort_keys=True, indent=4)
     return result
 
-@api.util2.json_route(application, '/world/<world>/deaths/overview')
+@api.util2.json_route(application, '/world/<world>/deaths/all')
 @api.util2.decode_args
 def api_deaths(world: minecraft.World):
-    """Returns JSON containing information about all recorded player deaths"""
+    """Returns JSON containing information about all player deaths"""
     # load from cache
     cache_path = api.util.CONFIG['cache'] / 'all-deaths.json'
     result = collections.defaultdict(list)
