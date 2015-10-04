@@ -201,7 +201,7 @@ def api_achievement_winners(world: minecraft.World):
             json.dump({
                 'numAchievements': num_achievements,
                 'result': result
-            }, fp, sort_keys=True, indent=4)
+            }, cache_f, sort_keys=True, indent=4)
     return result
 
 @api.util2.json_route(application, '/minigame/deathgames/log')
