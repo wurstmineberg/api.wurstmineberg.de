@@ -72,9 +72,9 @@ class Log:
                 if key.stop is not None:
                     continue
             else:
-                if key.start > date:
+                if key.start is not None and key.start > date:
                     continue
-                if key.stop <= date:
+                if key.stop is not None and key.stop <= date:
                     continue
             files.append(log_path)
         return self.__class__(self.world, files=files, reversed=self.is_reversed)
