@@ -310,51 +310,63 @@ def api_chunk_info_overworld(world: minecraft.World, x: int, y: range(16), z: in
 
 @api.util2.json_route(application, '/world/<world>/deaths/latest')
 @api.util2.decode_args
-def api_latest_deaths(world: minecraft.World): #TODO multiworld
+def api_latest_deaths(world: minecraft.World):
     """Returns JSON containing information about the most recent death of each player"""
-    import people
-
-    last_person = None
-    people_ids = {}
-    people_data = people.get_people_db().obj_dump(version=3)['people']
-    for wmb_id, person in people_data.items():
-        if 'minecraft' in person: #TODO fix for v3 format
-            people_ids[person['minecraft']] = wmb_id
-    deaths = {}
-    with (api.util.CONFIG['logPath'] / 'deaths.log').open() as deaths_log: #TODO parse world log
-        for line in deaths_log:
-            match = re.match('([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([^@ ]+) (.*)', line)
-            if match and match.group(2) in people_ids:
-                last_person = person_id = people_ids[match.group(2)]
-                deaths[person_id] = {
-                    'cause': match.group(3),
-                    'timestamp': match.group(1)
-                }
-    return {
-        'deaths': deaths,
-        'lastPerson': last_person
-    }
+    # load from cache
+    cache_path = api.util.CONFIG['cache'] / 'latest-deaths.json'
+    if cache_path.exists():
+        with cache_path.open() as cache_f:
+            result = json.load(cache_f)
+        log = api.log.Log(world)[datetime.date.fromtimestamp(cache_path.stat().st_mtime) - datetime.timedelta(days=2):] # only look at the new logs, plus 2 more days to account for timezone weirdness
+    else:
+        result = {
+            'deaths': {},
+            'lastPerson': None
+        }
+        log = api.log.Log(world)
+    # look for new deaths
+    for line in log:
+        if line.type is api.log.LineType.death:
+            result['deaths'][str(line.data['player'])] = {
+                'cause': line.data['cause'],
+                'timestamp': line.data['time'].strftime('%Y-%m-%d %H:%M:%S')
+            }
+            result['lastPerson'] = str(line.data['player'])
+    # write to cache
+    if api.util.CONFIG['cache'].exists():
+        with cache_path.open('w') as cache_f:
+            json.dump(result, cache_f, sort_keys=True, indent=4)
+    return result
 
 @api.util2.json_route(application, '/world/<world>/deaths/overview')
 @api.util2.decode_args
-def api_deaths(world: minecraft.World): #TODO multiworld
+def api_deaths(world: minecraft.World):
     """Returns JSON containing information about all recorded player deaths"""
-    people_ids = {}
-    people_data = people.get_people_db().obj_dump(version=3)['people']
-    for wmb_id, person in people_data.items():
-        if 'minecraft' in person: #TODO fix for v3 format
-            people_ids[person['minecraft']] = wmb_id
-    deaths = collections.defaultdict(list)
-    with (api.util.CONFIG['logPath'] / 'deaths.log').open() as deaths_log: #TODO parse world log
-        for line in deaths_log:
-            match = re.match('([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([^@ ]+) (.*)', line)
-            if match and match.group(2) in people_ids:
-                person_id = people_ids[match.group(2)]
-                deaths[person_id].append({
-                    'cause': match.group(3),
-                    'timestamp': match.group(1)
-                })
-    return deaths
+    # load from cache
+    cache_path = api.util.CONFIG['cache'] / 'all-deaths.json'
+    result = collections.defaultdict(list)
+    log = api.log.Log(world)
+    if cache_path.exists():
+        with cache_path.open() as cache_f:
+            cache = json.load(cache_f)
+            if cache['numMessages'] == len(api.log.death_messages):
+                result.update(cache['deaths'])
+                log = api.log.Log(world)[datetime.date.fromtimestamp(cache_path.stat().st_mtime) - datetime.timedelta(days=2):] # only look at the new logs, plus 2 more days to account for timezone weirdness
+    # look for new deaths
+    for line in log:
+        if line.type is api.log.LineType.death:
+            result[str(line.data['player'])].append({
+                'cause': line.data['cause'],
+                'timestamp': line.data['time'].strftime('%Y-%m-%d %H:%M:%S')
+            })
+    # write to cache
+    if api.util.CONFIG['cache'].exists():
+        with cache_path.open('w') as cache_f:
+            json.dump({
+                'deaths': result,
+                'numMessages': len(api.log.death_messages)
+            }, cache_f, sort_keys=True, indent=4)
+    return result
 
 @api.util2.json_route(application, '/world/<world>/level')
 @api.util2.decode_args

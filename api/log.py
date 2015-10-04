@@ -9,10 +9,62 @@ import uuid
 import api.util
 import api.util2
 
+class Regexes:
+    full_prefix = '\\[(.+?)/(.+?)\\]:?'
+    timestamp = '[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}'
+    minecraft_nick = '[A-Za-z0-9_]{1,16}'
+    old_prefix = '\\[(.+?)\\]:?'
+    uuid = '[0-9A-Fa-f]{8}-?[0-9A-Fa-f]{4}-?[0-9A-Fa-f]{4}-?[0-9A-Fa-f]{4}-?[0-9A-Fa-f]{12}'
+
+death_messages = (
+    'blew up',
+    'burned to death',
+    'drowned',
+    'drowned whilst trying to escape .*',
+    'fell from a high place',
+    'fell from a high place and fell out of the world',
+    'fell into a patch of cacti',
+    'fell into a patch of fire',
+    'fell off a ladder',
+    'fell off some vines',
+    'fell out of the water',
+    'fell out of the world',
+    'got finished off by .*',
+    'got finished off by .* using .*',
+    'hit the ground too hard',
+    'starved to death',
+    'suffocated in a wall',
+    'tried to swim in lava',
+    'tried to swim in lava while trying to escape .*',
+    'walked into a cactus while trying to escape .*',
+    'walked into a fire whilst fighting .*',
+    'was blown from a high place by .*',
+    'was blown up by .*',
+    'was burnt to a crisp whilst fighting .*',
+    'was doomed to fall by .*',
+    'was fireballed by .*',
+    'was killed by .* using magic',
+    'was killed by magic',
+    'was killed while trying to hurt .*',
+    'was pricked to death',
+    'was pummeled by .*',
+    'was shot by .*',
+    'was shot off a ladder by .*',
+    'was shot off some vines by .*',
+    'was slain by .*',
+    'was slain by .* using .*',
+    'was squashed by a falling anvil',
+    'was squashed by a falling block',
+    'was struck by lightning',
+    'went up in flames',
+    'withered away'
+) # http://minecraft.gamepedia.com/Health#Death_messages
+
 LineType = enum.Enum('LineType', [
     'achievement', # player earns an achievement
     'chat_action', # /me
     'chat_message',
+    'death', # known type of death message
     'gibberish', # cannot parse prefix
     'join', # player joins the game
     'leave', # player leaves the game
@@ -134,7 +186,17 @@ class Log:
                                 yield Line(LineType.join if match.group(2) == 'joined' else LineType.leave, time=time, player=player)
                             break
                         else:
-                            yield Line(LineType.unknown, time=time, origin_thread=origin_thread, log_level=log_level, text=text)
+                            for death_regex in death_messages:
+                                match = re.fullmatch('(' + Regexes.minecraft_nick + ') (' + death_regex + ')', text)
+                                if match:
+                                    if match.group(1) in player_uuids:
+                                        player = player_uuids[match.group(1)]
+                                    else:
+                                        player = player_uuids[match.group(1)] = api.util2.Player.by_minecraft_nick(match.group(1), at=time)
+                                    yield Line(LineType.death, time=time, player=player, cause=match.group(2))
+                                    break
+                            else:
+                                yield Line(LineType.unknown, time=time, origin_thread=origin_thread, log_level=log_level, text=text)
                     else:
                         yield Line(LineType.unknown, time=time, origin_thread=origin_thread, log_level=log_level, text=text)
                 elif origin_thread.startswith('User Authenticator'):
@@ -194,10 +256,3 @@ class Log:
                     if not isinstance(line, str):
                         line = line.decode('utf-8')
                     yield line.rstrip('\r\n')
-
-class Regexes:
-    full_prefix = '\\[(.+?)/(.+?)\\]:?'
-    timestamp = '[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}'
-    minecraft_nick = '[A-Za-z0-9_]{1,16}'
-    old_prefix = '\\[(.+?)\\]:?'
-    uuid = '[0-9A-Fa-f]{8}-?[0-9A-Fa-f]{4}-?[0-9A-Fa-f]{4}-?[0-9A-Fa-f]{4}-?[0-9A-Fa-f]{12}'
