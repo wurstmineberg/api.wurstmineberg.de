@@ -121,8 +121,14 @@ class Log:
             except ValueError:
                 date = None
             if date is None:
-                if key.stop is not None:
-                    continue
+                if log_path.stem == 'server':
+                    # server.log
+                    if key.start is not None:
+                        continue
+                else:
+                    # latest.log
+                    if key.stop is not None:
+                        continue
             else:
                 if key.start is not None and key.start > date:
                     continue
