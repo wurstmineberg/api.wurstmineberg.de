@@ -120,9 +120,15 @@ class Player:
     @classmethod
     def by_minecraft_nick(cls, minecraft_nick, at=None):
         if at is None:
-            return cls(requests.get('https://api.mojang.com/users/profiles/minecraft/{}'.format(minecraft_nick)).json()['id'])
+            try:
+                return cls(requests.get('https://api.mojang.com/users/profiles/minecraft/{}'.format(minecraft_nick)).json()['id'])
+            except Exception as e:
+                raise LookupError('Could not get player from Minecraft nick {!r}'.format(minecraft_nick)) from e
         else:
-            return cls(requests.get('https://api.mojang.com/users/profiles/minecraft/{}?at={}'.format(minecraft_nick, int(at.timestamp()))).json()['id'])
+            try:
+                return cls(requests.get('https://api.mojang.com/users/profiles/minecraft/{}?at={}'.format(minecraft_nick, int(at.timestamp()))).json()['id'])
+            except Exception as e:
+                raise LookupError('Could not get player from Minecraft nick {!r} at {:%Y-%m-%d %H:%M:%S}'.format(minecraft_nick, at)) from e
 
 def nbtfile_to_dict(filename, *, add_metadata=True):
     """Generates a JSON-serializable value from a path (string or pathlib.Path) representing a NBT file.
