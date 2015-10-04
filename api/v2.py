@@ -80,6 +80,13 @@ def api_moneys():
     with api.util.CONFIG['moneysFile'].open() as moneys_json:
         return json.load(moneys_json)
 
+@api.util2.json_route(application, '/meta/version')
+def api_version():
+    """Returns version numbers of known Wurstmineberg services (currently only this API instance)"""
+    return {
+        'api': __version__
+    }
+
 @api.util2.json_route(application, '/minecraft/items/all')
 def api_all_items():
     """Returns the item info JSON file (<a href="http://assets.{host}/json/items.json.description.txt">documentation</a>)"""
