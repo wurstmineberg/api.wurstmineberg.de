@@ -60,7 +60,7 @@ class Log:
     def __getitem__(self, key):
         if not isinstance(key, slice):
             raise TypeError('Invalid key: expected a slice, got {!r}'.format(key))
-        if slice.step is not None:
+        if key.step is not None:
             raise ValueError('Step not supported')
         files = []
         for log_path in self.files:
