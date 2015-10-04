@@ -166,16 +166,42 @@ def api_achievement_scores(world: minecraft.World):
 @api.util2.decode_args
 def api_achievement_winners(world: minecraft.World):
     """Returns an object mapping IDs of players who have completed all achievements to the UTC datetime they got their last achievement. This list is emptied each time a new achievement is added to Minecraft."""
+    # get the current number of achievements
     with (api.util.CONFIG['webAssets'] / 'json' / 'achievements.json').open() as achievements_f:
         num_achievements = len(json.load(achievements_f))
+    # get the set of players who have completed all achievements
     winners = {api.util2.Player(player) for player, score in api_achievement_scores(world).items() if score == num_achievements}
-    result = {}
-    for line in api.log.Log(world).reversed():
-        if line.type is api.log.LineType.achievement and line.data['player'] in winners:
-            result[str(line.data['player'])] = line.data['time'].strftime('%Y-%m-%d %H:%M:%S')
-            winners.remove(line.data['player'])
-            if len(winners) == 0:
-                break
+    # load from cache
+    cache_path = api.util.CONFIG['cache'] / 'achievement-winners.json'
+    if cache_path.exists():
+        with cache_path.open() as cache_f:
+            cache = json.load(cache_f)
+        if cache['numAchievements'] == num_achievements:
+            # no new achievements introduced, start with the cache
+            result = cache['result']
+            winners -= {api.util2.Player(player) for player in result}
+        else:
+            # new achievements introduced, any completions must have happened since cache creation
+            result = {}
+        log = api.log.Log(world)[datetime.date.fromtimestamp(cache_path.stat().st_mtime) - datetime.timedelta(days=2):].reversed() # only look at the new logs, plus 2 more days to account for timezone weirdness
+    else:
+        result = {}
+        log = api.log.Log(world).reversed()
+    # look for new completions
+    if len(winners) > 0:
+        for line in log:
+            if line.type is api.log.LineType.achievement and line.data['player'] in winners:
+                result[str(line.data['player'])] = line.data['time'].strftime('%Y-%m-%d %H:%M:%S')
+                winners.remove(line.data['player'])
+                if len(winners) == 0:
+                    break
+    # write to cache
+    if api.util.CONFIG['cache'].exists():
+        with cache_path.open('w') as cache_f:
+            json.dump({
+                'numAchievements': num_achievements,
+                'result': result
+            }, fp, sort_keys=True, indent=4)
     return result
 
 @api.util2.json_route(application, '/minigame/deathgames/log')

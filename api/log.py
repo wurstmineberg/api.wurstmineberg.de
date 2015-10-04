@@ -57,6 +57,28 @@ class Log:
         self.log_files = files
         self.is_reversed = reversed
 
+    def __getitem__(self, key):
+        if not isinstance(key, slice):
+            raise TypeError('Invalid key: expected a slice, got {!r}'.format(key))
+        if slice.step is not None:
+            raise ValueError('Step not supported')
+        files = []
+        for log_path in self.files:
+            try:
+                date = datetime.date(*map(int, log_path.stem[:len('9999-99-99')].split('-')))
+            except ValueError:
+                date = None
+            if date is None:
+                if key.stop is not None:
+                    continue
+            else:
+                if key.start > date:
+                    continue
+                if key.stop <= date:
+                    continue
+            files.append(log_path)
+        return self.__class__(self.world, files=files, reversed=self.is_reversed)
+
     def __iter__(self):
         def iter_file(log_file, player_uuids=None):
             if player_uuids is None:
