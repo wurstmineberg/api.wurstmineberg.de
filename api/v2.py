@@ -696,10 +696,11 @@ def api_sessions_last_seen_all():
     result = {}
     for world in minecraft.worlds():
         for player_id, timestamp in api_sessions_last_seen_world(world).items():
-            if player_id in result:
-                result[player_id] = max(result[player_id], timestamp, key=read_timestamp)
-            else:
-                result[player_id] = timestamp
+            if player_id not in result or read_timestamp(timestamp) > read_timestamp(result[player_id]['time']):
+                    result[player_id] = {
+                        'time': timestamp,
+                        'world': world.name
+                    }
     return result
 
 @api.util2.json_route(application, '/server/worlds')
