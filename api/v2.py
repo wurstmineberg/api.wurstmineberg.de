@@ -617,54 +617,26 @@ def api_sessions(world: minecraft.World):
 @api.util2.decode_args
 def api_sessions_last_seen_world(world: minecraft.World): #TODO multiworld
     """Returns the last known session for each player"""
-    matches = {
-        'join': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([a-z0-9]+|\\?) joined ([A-Za-z0-9_]{1,16})',
-        'leave': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([a-z0-9]+|\\?) left ([A-Za-z0-9_]{1,16})',
-        'restart': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) @restart',
-        'start': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) @start ([^ ]+)',
-        'stop': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) @stop'
-    }
-    ret = {}
-    with open(os.path.join(config('logPath'), 'logins.log')) as logins_log: #TODO parse world logs
-        for log_line in logins_log:
-            for match_type, match_string in matches.items():
-                match = re.match(match_string, log_line.strip('\n'))
-                if match:
-                    break
-            else:
-                continue
-            if match_type == 'restart':
-                for session in ret.values():
-                    if 'leaveTime' not in session:
-                        session['leaveTime'] = match.group(1)
-                        session['leaveReason'] = 'restart'
-            elif match_type == 'start':
-                for session in ret.values():
-                    if 'leaveTime' not in session:
-                        session['leaveTime'] = match.group(1)
-                        session['leaveReason'] = 'serverStartOverride'
-            elif match_type == 'stop':
-                for session in ret.values():
-                    if 'leaveTime' not in session:
-                        session['leaveTime'] = match.group(1)
-                        session['leaveReason'] = 'serverStop'
-            elif match_type == 'join':
-                if match.group(2) == '?':
-                    continue
-                ret[match.group(2)] = {
-                    'joinTime': match.group(1),
-                    'minecraftNick': match.group(3),
-                    'person': match.group(2)
-                }
-            elif match_type == 'leave':
-                if match.group(2) not in ret:
-                    continue
-                ret[match.group(2)]['leaveTime'] = match.group(1)
-                ret[match.group(2)]['leaveReason'] = 'logout'
-    for session in ret.values():
-        if 'leaveTime' not in session:
-            session['leaveReason'] = 'currentlyOnline'
-    return ret
+    # load from cache
+    cache_path = api.util.CONFIG['cache'] / 'last-seen' / '{}.json'.format(world)
+    if cache_path.exists():
+        with cache_path.open() as cache_f:
+            result = json.load(cache_f)
+        log = api.log.Log(world)[datetime.date.fromtimestamp(cache_path.stat().st_mtime) - datetime.timedelta(days=2):] # only look at the new logs, plus 2 more days to account for timezone weirdness
+    else:
+        result = {}
+        log = api.log.Log(world)
+    # look for new join/leave lines
+    for line in log:
+        if line.type is api.log.LineType.join or line.type is api.log.LineType.leave:
+            result[str(line.data['player'])] = line.data['time'].strftime('%Y-%m-%d %H:%M:%S')
+    # write to cache
+    if api.util.CONFIG['cache'].exists():
+        if not cache_path.parent.exists():
+            cache_path.parent.mkdir()
+        with cache_path.open('w') as cache_f:
+            json.dump(result, cache_f, sort_keys=True, indent=4)
+    return result
 
 @api.util2.json_route(application, '/world/<world>/status')
 @api.util2.decode_args
@@ -717,56 +689,18 @@ def api_player_ids():
         yield str(player)
 
 @api.util2.json_route(application, '/server/sessions/lastseen')
-def api_sessions_last_seen_all(): #TODO multiworld
-    """Returns the last known session for each player"""
-    matches = {
-        'join': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([a-z0-9]+|\\?) joined ([A-Za-z0-9_]{1,16})',
-        'leave': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([a-z0-9]+|\\?) left ([A-Za-z0-9_]{1,16})',
-        'restart': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) @restart',
-        'start': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) @start ([^ ]+)',
-        'stop': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) @stop'
-    }
-    ret = {}
-    with open(os.path.join(config('logPath'), 'logins.log')) as logins_log: #TODO parse server logs
-        for log_line in logins_log:
-            for match_type, match_string in matches.items():
-                match = re.match(match_string, log_line.strip('\n'))
-                if match:
-                    break
+def api_sessions_last_seen_all():
+    def read_timestamp(timestamp):
+        return datetime.datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S').replace(tzinfo=datetime.timezone.utc)
+
+    result = {}
+    for world in minecraft.worlds():
+        for player_id, timestamp in api_sessions_last_seen_world(world).items():
+            if player_id in result:
+                result[player_id] = max(result[player_id], timestamp, key=read_timestamp)
             else:
-                continue
-            if match_type == 'restart':
-                for session in ret.values():
-                    if 'leaveTime' not in session:
-                        session['leaveTime'] = match.group(1)
-                        session['leaveReason'] = 'restart'
-            elif match_type == 'start':
-                for session in ret.values():
-                    if 'leaveTime' not in session:
-                        session['leaveTime'] = match.group(1)
-                        session['leaveReason'] = 'serverStartOverride'
-            elif match_type == 'stop':
-                for session in ret.values():
-                    if 'leaveTime' not in session:
-                        session['leaveTime'] = match.group(1)
-                        session['leaveReason'] = 'serverStop'
-            elif match_type == 'join':
-                if match.group(2) == '?':
-                    continue
-                ret[match.group(2)] = {
-                    'joinTime': match.group(1),
-                    'minecraftNick': match.group(3),
-                    'person': match.group(2)
-                }
-            elif match_type == 'leave':
-                if match.group(2) not in ret:
-                    continue
-                ret[match.group(2)]['leaveTime'] = match.group(1)
-                ret[match.group(2)]['leaveReason'] = 'logout'
-    for session in ret.values():
-        if 'leaveTime' not in session:
-            session['leaveReason'] = 'currentlyOnline'
-    return ret
+                result[player_id] = timestamp
+    return result
 
 @api.util2.json_route(application, '/server/worlds')
 def api_worlds():
