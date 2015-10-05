@@ -242,10 +242,12 @@ class Log:
             self.log_files = []
             if (self.world.path / 'server.log').exists():
                 self.log_files.append(self.world.path / 'server.log')
-            for log_path in sorted((self.world.path / 'logs').iterdir()):
-                if log_path.name != 'latest.log':
-                    self.log_files.append(log_path)
-            self.log_files.append(self.world.path / 'logs' / 'latest.log')
+            if (self.world.path / 'logs').exists():
+                for log_path in sorted((self.world.path / 'logs').iterdir()):
+                    if log_path.name != 'latest.log':
+                        self.log_files.append(log_path)
+                if (self.world.path / 'logs' / 'latest.log').exists():
+                    self.log_files.append(self.world.path / 'logs' / 'latest.log')
         return self.log_files
 
     @classmethod
