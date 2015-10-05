@@ -568,35 +568,13 @@ def api_sessions_last_seen():
 
 @application.route('/server/status.json')
 def api_short_server_status():
-    """Returns JSON containing whether the server is online, the current Minecraft version, and the list of people who are online. Requires systemd-minecraft and mcstatus."""
-    import mcstatus
-
-    server = mcstatus.MinecraftServer.lookup(api.util.CONFIG['host'])
-    try:
-        status = server.status()
-    except ConnectionRefusedError:
-        main_world = minecraft.World()
-        return {
-            'list': [],
-            'on': False,
-            'version': main_world.version()
-        }
-    else:
-        import people
-        people_data = people.get_people_db().obj_dump(version=2)['people']
-        def wmb_id(player_info):
-            for person_data in people_data:
-                if 'minecraftUUID' in person_data and uuid.UUID(person_data['minecraftUUID']) == uuid.UUID(player_info.id):
-                    return person_data['id']
-            for person_data in people_data:
-                if person_data['minecraft'] == player_info.name:
-                    return person_data['id']
-
-        return {
-            'list': [wmb_id(player) for player in (status.players.sample or [])],
-            'on': True,
-            'version': status.version.name
-        }
+    """Returns JSON containing whether the server is online, the current Minecraft version, and the list of people who are online."""
+    status = api.v2.api_world_status(minecraft.World())
+    return {
+        'list': status['list'],
+        'on': status['running'],
+        'version': status['version']
+    }
 
 @application.route('/server/whitelist.json')
 def api_whitelist():
