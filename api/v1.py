@@ -198,8 +198,7 @@ def api_item_render_dyed_png(item_id, color):
 @application.route('/minigame/achievements/winners.json')
 def api_achievement_winners():
     """Returns a list of Wurstmineberg IDs of all players who have completed all achievements, ordered chronologically by the time they got their last achievement. This list is emptied each time a new achievement is added to Minecraft."""
-    with (api.util.CONFIG['logPath'] / 'achievements.log').open() as achievements_log:
-        return json.dumps(list(line.strip() for line in achievements_log))
+    return list(api.v2.api_achievement_winners(minecraft.World()).keys())
 
 @application.route('/minigame/diary/all.json')
 def api_diary():
@@ -274,50 +273,12 @@ def api_stats(player_minecraft_name):
 @application.route('/server/deaths/latest.json')
 def api_latest_deaths():
     """Returns JSON containing information about the most recent death of each player"""
-    import people
-
-    last_person = None
-    people_ids = {}
-    people_data = people.get_people_db().obj_dump(version=2)['people']
-    for person in people_data:
-        if 'id' in person and 'minecraft' in person:
-            people_ids[person['minecraft']] = person['id']
-    deaths = {}
-    with (api.util.CONFIG['logPath'] / 'deaths.log').open() as deaths_log:
-        for line in deaths_log:
-            match = re.match('([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([^@ ]+) (.*)', line)
-            if match and match.group(2) in people_ids:
-                last_person = person_id = people_ids[match.group(2)]
-                deaths[person_id] = {
-                    'cause': match.group(3),
-                    'timestamp': match.group(1)
-                }
-    return {
-        'deaths': deaths,
-        'lastPerson': last_person
-    }
+    return api.v2.api_latest_deaths(minecraft.World())
 
 @application.route('/server/deaths/overview.json')
 def api_deaths():
     """Returns JSON containing information about all recorded player deaths"""
-    import people
-
-    people_ids = {}
-    people_data = people.get_people_db().obj_dump(version=2)['people']
-    for person in people_data:
-        if 'id' in person and 'minecraft' in person:
-            people_ids[person['minecraft']] = person['id']
-    deaths = collections.defaultdict(list)
-    with (api.util.CONFIG['logPath'] / 'deaths.log').open() as deaths_log:
-        for line in deaths_log:
-            match = re.match('([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([^@ ]+) (.*)', line)
-            if match and match.group(2) in people_ids:
-                person_id = people_ids[match.group(2)]
-                deaths[person_id].append({
-                    'cause': match.group(3),
-                    'timestamp': match.group(1)
-                })
-    return deaths
+    return api.v2.api_deaths(minecraft.World())
 
 @application.route('/server/level.json')
 def api_level():

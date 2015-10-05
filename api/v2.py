@@ -615,7 +615,7 @@ def api_sessions(world: minecraft.World):
 
 @api.util2.json_route(application, '/world/<world>/sessions/lastseen')
 @api.util2.decode_args
-def api_sessions_last_seen_world(world: minecraft.World): #TODO multiworld
+def api_sessions_last_seen_world(world: minecraft.World):
     """Returns the last known session for each player"""
     # load from cache
     cache_path = api.util.CONFIG['cache'] / 'last-seen' / '{}.json'.format(world)
