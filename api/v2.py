@@ -588,6 +588,8 @@ def api_sessions(world: minecraft.World):
                 yield current_uptime
                 current_uptime = None
         elif line.type is api.log.LineType.join:
+            if current_uptime is None:
+                continue
             join_time_str = line.data['time'].strftime('%Y-%m-%d %H:%M:%S')
             if 'sessions' not in current_uptime:
                 current_uptime['sessions'] = []
@@ -596,6 +598,8 @@ def api_sessions(world: minecraft.World):
                 'person': str(line.data['player'])
             })
         elif line.type is api.log.LineType.leave:
+            if current_uptime is None:
+                continue
             leave_time_str = line.data['time'].strftime('%Y-%m-%d %H:%M:%S')
             for session in current_uptime.get('sessions', []):
                 if 'leaveTime' not in session and session['person'] == str(line.data['player']):
