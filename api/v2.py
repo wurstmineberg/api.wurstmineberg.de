@@ -312,10 +312,14 @@ def api_chunk_info_overworld(world: minecraft.World, x: int, y: range(16), z: in
 @api.util2.decode_args
 def api_latest_deaths(world: minecraft.World):
     """Returns JSON containing information about the most recent death of each player"""
+    def newest_timestamp(item):
+        player_id, deaths = item
+        return datetime.datetime.strptime(deaths[-1]['timestamp'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=datetime.timezone.utc)
+
     all_deaths = api_deaths(world)
     return {
         'deaths': {player_id: deaths[-1] for player_id, deaths in all_deaths.items()},
-        'lastPerson': more_itertools.first(sorted(all_deaths.items(), key=lambda (player_id, deaths): deaths[-1]['timestamp']), (None, []))[0]
+        'lastPerson': more_itertools.first(sorted(all_deaths.items(), key=newest_timestamp, reverse=True), (None, []))[0]
     }
 
 @api.util2.json_route(application, '/world/<world>/deaths/all')
