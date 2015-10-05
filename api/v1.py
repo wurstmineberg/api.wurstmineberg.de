@@ -198,7 +198,7 @@ def api_item_render_dyed_png(item_id, color):
 @application.route('/minigame/achievements/winners.json')
 def api_achievement_winners():
     """Returns a list of Wurstmineberg IDs of all players who have completed all achievements, ordered chronologically by the time they got their last achievement. This list is emptied each time a new achievement is added to Minecraft."""
-    return list(api.v2.api_achievement_winners(minecraft.World()).keys())
+    return json.dumps(list(api.v2.api_achievement_winners(minecraft.World()).keys()), sort_keys=True, indent=4)
 
 @application.route('/minigame/diary/all.json')
 def api_diary():
@@ -252,21 +252,15 @@ def api_player_stats_grouped(player_id):
 @application.route('/player/:player_minecraft_name/stats.json')
 def api_stats(player_minecraft_name):
     """Returns the stats JSON file from the server, also accepts the player id instead of the Minecraft name"""
+    import api.util2
+
     try:
-        player_minecraft_name = api_player_info(player_minecraft_name)['minecraft']
-    except:
-        pass # no such person or already correct
-    stats_file = minecraft.World().world_path / 'stats' / (player_minecraft_name + '.json')
+        player = api.util2.Player.by_minecraft_nick(player_minecraft_name)
+    except LookupError:
+        player = api.util2.Player(player_minecraft_name)
+    stats_file = minecraft.World().world_path / 'stats' / player_minecraft_name + '{}.json'.format(player)
     if not stats_file.exists():
-        for whitelist_entry in json.loads(api_whitelist()):
-            if whitelist_entry['name'] == player_minecraft_name:
-                uuid = whitelist_entry['uuid']
-                break
-        else:
-            uuid = api_player_info(player_minecraft_name)['minecraftUUID']
-        if '-' not in uuid:
-            uuid = uuid[:8] + '-' + uuid[8:12] + '-' + uuid[12:16] + '-' + uuid[16:20] + '-' + uuid[20:]
-        stats_file = minecraft.World().world_path / 'stats' / (uuid + '.json')
+        stats_file = minecraft.World().world_path / 'stats' / '{}.json'.format(player.uuid)
     with stats_file.open() as stats:
         return json.load(stats)
 
@@ -336,7 +330,7 @@ def api_player_data_all():
 @application.route('/server/playernames.json')
 def api_playernames():
     """Returns the Minecraft nicknames of all players on the whitelist"""
-    return json.dumps(playernames())
+    return json.dumps(playernames(), sort_keys=True, indent=4)
 
 @application.route('/server/playerstats.json')
 def api_playerstats():
