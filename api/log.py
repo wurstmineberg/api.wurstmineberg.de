@@ -174,7 +174,7 @@ class Log:
                             'achievement': '(' + Regexes.minecraft_nick + ') has just earned the achievement \\[(.+)\\]',
                             'chat_action': '\\* (' + Regexes.minecraft_nick + ') (.*)',
                             'chat_message': '<(' + Regexes.minecraft_nick + ')> (.*)',
-                            'join_leave': '(' + Regexes.minecraft_nick + ') (joined|left) the game'
+                            'join_leave': '(' + Regexes.minecraft_nick + ') (joined|left) the game',
                             'start': 'Starting minecraft server version (.*)',
                             'stop': 'Stopping the server'
                         }
