@@ -312,31 +312,11 @@ def api_chunk_info_overworld(world: minecraft.World, x: int, y: range(16), z: in
 @api.util2.decode_args
 def api_latest_deaths(world: minecraft.World):
     """Returns JSON containing information about the most recent death of each player"""
-    # load from cache
-    cache_path = api.util.CONFIG['cache'] / 'latest-deaths.json'
-    if cache_path.exists():
-        with cache_path.open() as cache_f:
-            result = json.load(cache_f)
-        log = api.log.Log(world)[datetime.date.fromtimestamp(cache_path.stat().st_mtime) - datetime.timedelta(days=2):] # only look at the new logs, plus 2 more days to account for timezone weirdness
-    else:
-        result = {
-            'deaths': {},
-            'lastPerson': None
-        }
-        log = api.log.Log(world)
-    # look for new deaths
-    for line in log:
-        if line.type is api.log.LineType.death:
-            result['deaths'][str(line.data['player'])] = {
-                'cause': line.data['cause'],
-                'timestamp': line.data['time'].strftime('%Y-%m-%d %H:%M:%S')
-            }
-            result['lastPerson'] = str(line.data['player'])
-    # write to cache
-    if api.util.CONFIG['cache'].exists():
-        with cache_path.open('w') as cache_f:
-            json.dump(result, cache_f, sort_keys=True, indent=4)
-    return result
+    all_deaths = api_deaths(world)
+    return {
+        'deaths': {player_id: deaths[-1] for player_id, deaths in all_deaths.items()},
+        'lastPerson': more_itertools.first(sorted(all_deaths.items(), key=lambda (player_id, deaths): deaths[-1]['timestamp']), (None, []))[0]
+    }
 
 @api.util2.json_route(application, '/world/<world>/deaths/all')
 @api.util2.decode_args
