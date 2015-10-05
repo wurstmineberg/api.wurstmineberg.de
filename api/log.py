@@ -68,6 +68,8 @@ LineType = enum.Enum('LineType', [
     'gibberish', # cannot parse prefix
     'join', # player joins the game
     'leave', # player leaves the game
+    'start', # server start
+    'stop', # server stop
     'unknown' # can parse timestamp, origin thread, and log level, but the rest of the message is not in a known format
 ], module=__name__)
 
@@ -173,15 +175,18 @@ class Log:
                             'chat_action': '\\* (' + Regexes.minecraft_nick + ') (.*)',
                             'chat_message': '<(' + Regexes.minecraft_nick + ')> (.*)',
                             'join_leave': '(' + Regexes.minecraft_nick + ') (joined|left) the game'
+                            'start': 'Starting minecraft server version (.*)',
+                            'stop': 'Stopping the server'
                         }
                         for match_type, match_string in matches.items():
                             match = re.fullmatch(match_string, text)
                             if not match:
                                 continue # not the type of message currently being tested for
-                            if match.group(1) in player_uuids:
-                                player = player_uuids[match.group(1)]
-                            else:
-                                player = player_uuids[match.group(1)] = api.util2.Player.by_minecraft_nick(match.group(1), at=time)
+                            if match_type in ('achievement', 'chat_action', 'chat_message', 'join_leave'):
+                                if match.group(1) in player_uuids:
+                                    player = player_uuids[match.group(1)]
+                                else:
+                                    player = player_uuids[match.group(1)] = api.util2.Player.by_minecraft_nick(match.group(1), at=time)
                             if match_type == 'achievement':
                                 yield Line(LineType.achievement, time=time, player=player, achievement=match.group(2))
                             elif match_type == 'chat_action':
@@ -190,6 +195,10 @@ class Log:
                                 yield Line(LineType.chat_message, time=time, player=player, message=match.group(2))
                             elif match_type == 'join_leave':
                                 yield Line(LineType.join if match.group(2) == 'joined' else LineType.leave, time=time, player=player)
+                            elif match_type == 'start':
+                                yield Line(LineType.start, time=time, version=match.group(1))
+                            elif match_type == 'stop':
+                                yield Line(LineType.stop, time=time)
                             break
                         else:
                             for death_regex in death_messages:

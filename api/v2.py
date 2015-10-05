@@ -557,6 +557,58 @@ def api_scoreboard(world: minecraft.World):
     nbt_file = world.world_path / 'data' / 'scoreboard.dat'
     return api.util2.nbtfile_to_dict(nbt_file)
 
+@api.util2.json_route(application, '/world/<world>/sessions/all')
+@api.util2.decode_args
+def api_sessions(world: minecraft.World):
+    """Returns all player sessions since the first logged server start"""
+    log = api.log.Log(world)
+    current_uptime = None
+    for line in log:
+        if line.type is api.log.LineType.start:
+            start_time_str = line.data['time'].strftime('%Y-%m-%d %H:%M:%S')
+            if current_uptime is not None:
+                current_uptime['endTime'] = start_time_str
+                for session in current_uptime.get('sessions', []):
+                    if 'leaveTime' not in session:
+                        session['leaveTime'] = start_time_str
+                        session['leaveReason'] = 'serverStartOverride'
+                yield current_uptime
+            current_uptime = {
+                'startTime': start_time_str,
+                'version': line.data['version']
+            }
+        elif line.type is api.log.LineType.stop:
+            stop_time_str = line.data['time'].strftime('%Y-%m-%d %H:%M:%S')
+            if current_uptime is not None:
+                current_uptime['endTime'] = stop_time_str
+                for session in current_uptime.get('sessions', []):
+                    if 'leaveTime' not in session:
+                        session['leaveTime'] = stop_time_str
+                        session['leaveReason'] = 'serverStop'
+                yield current_uptime
+                current_uptime = None
+        elif line.type is api.log.LineType.join:
+            join_time_str = line.data['time'].strftime('%Y-%m-%d %H:%M:%S')
+            if 'sessions' not in current_uptime:
+                current_uptime['sessions'] = []
+            current_uptime['sessions'].append({
+                'joinTime': join_time_str,
+                'person': str(line.data['player'])
+            })
+        elif line.type is api.log.LineType.leave:
+            leave_time_str = line.data['time'].strftime('%Y-%m-%d %H:%M:%S')
+            for session in current_uptime.get('sessions', []):
+                if 'leaveTime' not in session and session['person'] == str(line.data['player']):
+                    session['leaveTime'] = leave_time_str
+                    session['leaveReason'] = 'logout'
+                    break
+
+    if current_uptime is not None:
+        for session in current_uptime.get('sessions', []):
+            if 'leaveTime' not in session:
+                session['leaveReason'] = 'currentlyOnline'
+        yield current_uptime
+
 @api.util2.json_route(application, '/world/<world>/sessions/lastseen')
 @api.util2.decode_args
 def api_sessions_last_seen_world(world: minecraft.World): #TODO multiworld
@@ -609,80 +661,6 @@ def api_sessions_last_seen_world(world: minecraft.World): #TODO multiworld
         if 'leaveTime' not in session:
             session['leaveReason'] = 'currentlyOnline'
     return ret
-
-@api.util2.json_route(application, '/world/<world>/sessions/overview')
-@api.util2.decode_args
-def api_sessions(world: minecraft.World): #TODO multiworld
-    """Returns known players' sessions since the first recorded server restart"""
-    #TODO log parsing
-    uptimes = []
-    current_uptime = None
-    matches = {
-        'join': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([a-z0-9]+|\\?) joined ([A-Za-z0-9_]{1,16})',
-        'leave': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ([a-z0-9]+|\\?) left ([A-Za-z0-9_]{1,16})',
-        'restart': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) @restart',
-        'start': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) @start ([^ ]+)',
-        'stop': '([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) @stop'
-    }
-    with open(os.path.join(config('logPath'), 'logins.log')) as logins_log: #TODO parse world logs
-        for log_line in logins_log:
-            for match_type, match_string in matches.items():
-                match = re.match(match_string, log_line.strip('\n'))
-                if match:
-                    break
-            else:
-                continue
-            if match_type == 'restart':
-                if current_uptime is not None:
-                    current_uptime['endTime'] = match.group(1)
-                    for session in current_uptime.get('sessions', []):
-                        if 'leaveTime' not in session:
-                            session['leaveTime'] = match.group(1)
-                            session['leaveReason'] = 'restart'
-                    uptimes.append(current_uptime)
-                current_uptime = {'startTime': match.group(1)}
-            elif match_type == 'start':
-                if current_uptime is not None:
-                    current_uptime['endTime'] = match.group(1)
-                    for session in current_uptime.get('sessions', []):
-                        if 'leaveTime' not in session:
-                            session['leaveTime'] = match.group(1)
-                            session['leaveReason'] = 'serverStartOverride'
-                    uptimes.append(current_uptime)
-                current_uptime = {
-                    'startTime': match.group(1),
-                    'version': match.group(2)
-                }
-            elif match_type == 'stop':
-                if current_uptime is not None:
-                    current_uptime['endTime'] = match.group(1)
-                    for session in current_uptime.get('sessions', []):
-                        if 'leaveTime' not in session:
-                            session['leaveTime'] = match.group(1)
-                            session['leaveReason'] = 'serverStop'
-                    uptimes.append(current_uptime)
-            elif current_uptime is None or match.group(2) == '?':
-                continue
-            elif match_type == 'join':
-                if 'sessions' not in current_uptime:
-                    current_uptime['sessions'] = []
-                current_uptime['sessions'].append({
-                    'joinTime': match.group(1),
-                    'minecraftNick': match.group(3),
-                    'person': match.group(2)
-                })
-            elif match_type == 'leave':
-                for session in current_uptime.get('sessions', []):
-                    if 'leaveTime' not in session and session['person'] == match.group(2):
-                        session['leaveTime'] = match.group(1)
-                        session['leaveReason'] = 'logout'
-                        break
-    if current_uptime is not None:
-        for session in current_uptime.get('sessions', []):
-            if 'leaveTime' not in session:
-                session['leaveReason'] = 'currentlyOnline'
-        uptimes.append(current_uptime)
-    return {'uptimes': uptimes}
 
 @api.util2.json_route(application, '/world/<world>/status')
 @api.util2.decode_args
