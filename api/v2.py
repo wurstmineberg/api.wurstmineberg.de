@@ -690,6 +690,7 @@ def api_player_ids():
 
 @api.util2.json_route(application, '/server/sessions/lastseen')
 def api_sessions_last_seen_all():
+    """Returns the last known session for each player, including the world name."""
     def read_timestamp(timestamp):
         return datetime.datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S').replace(tzinfo=datetime.timezone.utc)
 
