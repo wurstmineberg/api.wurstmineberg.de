@@ -258,7 +258,7 @@ def api_stats(player_minecraft_name):
         player = api.util2.Player.by_minecraft_nick(player_minecraft_name)
     except LookupError:
         player = api.util2.Player(player_minecraft_name)
-    stats_file = minecraft.World().world_path / 'stats' / '{}.json'.format(player['minecraft']['nicks'][-1])
+    stats_file = minecraft.World().world_path / 'stats' / '{}.json'.format(player.data['minecraft']['nicks'][-1])
     if not stats_file.exists():
         stats_file = minecraft.World().world_path / 'stats' / '{}.json'.format(player.uuid)
     with stats_file.open() as stats:
