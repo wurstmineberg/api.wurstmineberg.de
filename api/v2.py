@@ -153,7 +153,7 @@ def api_item_render_dyed_png(plugin, item_id, color: 'color'):
 
         item = api_item_by_id(plugin, item_id)
 
-        image = PIL.Image.open(api.util.CONFIG['webAssets'] / 'img' / 'grid-base' / item['image']) #TODO remove str cast, requires a feature from the next Pillow release after 2.9.0
+        image = PIL.Image.open(api.util.CONFIG['webAssets'] / 'img' / 'grid-base' / item['image'])
         image = PIL.ImageChops.multiply(image, PIL.Image.new('RGBA', image.size, color=color + (255,)))
         return image
 

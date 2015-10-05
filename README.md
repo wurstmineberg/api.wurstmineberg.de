@@ -8,7 +8,7 @@ Requirements
 ============
 
 *   [Python](http://python.org/) 3.4
-*   [Pillow](http://pypi.python.org/pypi/Pillow) 2.5 (required for image-producing endpoints only)
+*   [Pillow](http://pypi.python.org/pypi/Pillow) 3.0 (required for image-producing endpoints only)
 *   [anvil](https://github.com/wurstmineberg/anvil) (required for chunk endpoints only)
 *   [bottle](http://bottlepy.org/) 0.12
 *   [mcstatus](https://github.com/Dinnerbone/mcstatus) (required for world status endpoints only)
