@@ -260,6 +260,17 @@ def api_skin_render_head_png(player: api.util2.Player, size: range(1025)):
 
     return api.util2.cached_image('skins/heads/{}/{}.png'.format(size, player), image_func, api.util2.skin_cache_check)
 
+@application.route('world/<world>/backup/latest.tar.gz')
+@api.util2.decode_args
+def api_latest_backup(world: minecraft.World):
+    """Sends the latest backup of the world directory as a gzipped tarball."""
+    import backuproll
+
+    backup_roll = backuproll.BackupRoll('/opt/wurstmineberg/backup/{}'.format(world), '{}_'.format(world), '.tar.gz', '%Y-%m-%d_%Hh%M', None, simulate=True)
+    latest_backup = backup_roll.list_backups_recent()[-1]
+
+    return bottle.static_file(latest_backup.filename, root=latest_backup.basedir)
+
 @api.util2.json_route(application, '/world/<world>/chunks/end/column/<x>/<z>')
 @api.util2.decode_args
 def api_chunk_column_end(world: minecraft.World, x: int, z: int):
