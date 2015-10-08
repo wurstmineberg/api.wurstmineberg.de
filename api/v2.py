@@ -260,7 +260,10 @@ def api_latest_backup(world: minecraft.World):
     import backuproll
 
     backup_roll = backuproll.BackupRoll('/opt/wurstmineberg/backup/{}'.format(world), '{}_'.format(world), '.tar.gz', '%Y-%m-%d_%Hh%M', None, simulate=True)
-    latest_backup = backup_roll.list_backups_recent()[-1]
+    try:
+        latest_backup = backup_roll.list_backups_recent()[-1]
+    except IndexError:
+        bottle.abort(404, 'No backups exist for the {} world'.format(world))
 
     return bottle.static_file(latest_backup.filename, root=latest_backup.basedir)
 
