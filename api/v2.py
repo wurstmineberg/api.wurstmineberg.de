@@ -253,7 +253,7 @@ def api_skin_render_head_png(player: api.util2.Player, size: range(1025)):
 
     return api.util2.cached_image('skins/heads/{}/{}.png'.format(size, player), image_func, api.util2.skin_cache_check)
 
-@application.route('world/<world>/backup/latest.tar.gz')
+@application.route('/world/<world>/backup/latest.tar.gz')
 @api.util2.decode_args
 def api_latest_backup(world: minecraft.World):
     """Sends the latest backup of the world directory as a gzipped tarball."""
