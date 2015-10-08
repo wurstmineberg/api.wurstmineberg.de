@@ -3,10 +3,6 @@ import sys
 sys.path.append('/opt/py')
 
 import bottle
-import collections
-import contextlib
-from datetime import datetime
-import io
 import json
 import minecraft
 import nbt.nbt
@@ -14,10 +10,7 @@ import os
 import os.path
 import pathlib
 import re
-import subprocess
-import tempfile
 import time
-import uuid
 
 import api.util
 import api.v2

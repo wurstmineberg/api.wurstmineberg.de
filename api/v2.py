@@ -4,21 +4,14 @@ sys.path.append('/opt/py')
 
 import bottle
 import collections
-import contextlib
 import datetime
 import hashlib
-import io
 import json
 import minecraft
 import more_itertools
-import nbt.nbt
-import os
-import os.path
 import pathlib
 import re
 import subprocess
-import time
-import uuid
 import xml.sax.saxutils
 
 import api.log

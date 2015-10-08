@@ -4,9 +4,7 @@ import gzip
 import minecraft
 import pathlib
 import re
-import uuid
 
-import api.util
 import api.util2
 
 class Regexes:

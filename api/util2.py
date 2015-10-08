@@ -1,4 +1,3 @@
-import api.util
 import bottle
 import datetime
 import functools
@@ -15,6 +14,8 @@ import time
 import tempfile
 import types
 import uuid
+
+import api.util
 
 class Player:
     def __init__(self, player_id):
