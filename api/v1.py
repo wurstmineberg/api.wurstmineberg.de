@@ -3,6 +3,7 @@ import sys
 sys.path.append('/opt/py')
 
 import bottle
+import contextlib
 import json
 import minecraft
 import nbt.nbt
