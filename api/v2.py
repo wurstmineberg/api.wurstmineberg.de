@@ -259,13 +259,21 @@ def api_latest_backup(world: minecraft.World):
     """Sends the latest backup of the world directory as a gzipped tarball."""
     import backuproll
 
-    backup_roll = backuproll.BackupRoll('/opt/wurstmineberg/backup/{}'.format(world), '{}_'.format(world), '.tar.gz', '%Y-%m-%d_%Hh%M', None, simulate=True)
-    try:
-        latest_backup = backup_roll.list_backups_recent()[-1]
-    except IndexError:
-        bottle.abort(404, 'No backups exist for the {} world'.format(world))
+    if float(backuproll.__version__) < 0.2:
+        backup_roll = backuproll.BackupRoll('/opt/wurstmineberg/backup/{}'.format(world), '{}_'.format(world), '.tar.gz', '%Y-%m-%d_%Hh%M', None, simulate=True)
+        try:
+            latest_backup = backup_roll.list_backups_recent()[-1]
+        except IndexError:
+            bottle.abort(404, 'No backups exist for the {} world'.format(world))
 
-    return bottle.static_file(latest_backup.filename, root=latest_backup.basedir)
+        return bottle.static_file(latest_backup.filename, root=latest_backup.basedir)
+    else:
+        store = backuproll.MinecraftBackupRoll.get_readonly_store()
+        collection = store.get_collection(str(world))
+        backup = collection.get_retain_group('recent').get_latest_backup()
+        bottle.response.content_type = 'application/x-compressed'
+        bottle.response.set_header('Content-Disposition', 'attachment; filename={}.tar.gz'.format(backup.name))
+        return backup.tar_file_iterator(subdir=str(world))
 
 @api.util2.json_route(application, '/world/<world>/chunks/end/column/<x>/<z>')
 @api.util2.decode_args
