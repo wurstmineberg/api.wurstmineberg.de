@@ -219,7 +219,7 @@ def api_player_people():
     db = people.get_people_db().obj_dump(version=3)
     for person in db['people'].values():
         if 'gravatar' in person:
-            person['gravatar'] = 'http://www.gravatar.com/avatar/{}'.format(hashlib.md5(person['gravatar'].encode('utf-8')).hexdigest())
+            person['gravatar'] = 'https://www.gravatar.com/avatar/{}'.format(hashlib.md5(person['gravatar'].encode('utf-8')).hexdigest())
     return db
 
 @api.util2.json_route(application, '/player/<player>/info')
@@ -228,7 +228,7 @@ def api_player_info(player: api.util2.Player):
     """Returns the section of <a href="http://wiki.{host}/People_file/Version_3">people.json</a> that corresponds to the player, except for the "gravatar" private field, which is replaced by the gravatar URL."""
     person_data = player.data
     if 'gravatar' in person_data:
-        person_data['gravatar'] = 'http://www.gravatar.com/avatar/{}'.format(hashlib.md5(person_data['gravatar'].encode('utf-8')).hexdigest())
+        person_data['gravatar'] = 'https://www.gravatar.com/avatar/{}'.format(hashlib.md5(person_data['gravatar'].encode('utf-8')).hexdigest())
     return person_data
 
 @application.route('/player/<player>/skin/render/front/<size>.png')
