@@ -174,7 +174,7 @@ def api_achievement_winners(world: minecraft.World):
     winners = {api.util2.Player(player) for player, score in api_achievement_scores(world).items() if score == num_achievements}
     # load from cache
     cache_path = api.util.CONFIG['cache'] / 'achievement-winners.json'
-    if cache_path.exists():
+    try:
         with cache_path.open() as cache_f:
             cache = json.load(cache_f)
         if cache['numAchievements'] == num_achievements:
@@ -185,7 +185,7 @@ def api_achievement_winners(world: minecraft.World):
             # new achievements introduced, any completions must have happened since cache creation
             result = {}
         log = api.log.Log(world)[datetime.date.fromtimestamp(cache_path.stat().st_mtime) - datetime.timedelta(days=2):].reversed() # only look at the new logs, plus 2 more days to account for timezone weirdness
-    else:
+    except:
         result = {}
         log = api.log.Log(world).reversed()
     # look for new completions
@@ -375,10 +375,11 @@ def api_deaths(world: minecraft.World):
     log = api.log.Log(world)
     if cache_path.exists():
         with cache_path.open() as cache_f:
-            cache = json.load(cache_f)
-            if cache['numMessages'] == len(api.log.death_messages):
-                result.update(cache['deaths'])
-                log = api.log.Log(world)[datetime.date.fromtimestamp(cache_path.stat().st_mtime) - datetime.timedelta(days=2):] # only look at the new logs, plus 2 more days to account for timezone weirdness
+            with contextlib.suppress(ValueError):
+                cache = json.load(cache_f)
+                if cache['numMessages'] == len(api.log.death_messages):
+                    result.update(cache['deaths'])
+                    log = api.log.Log(world)[datetime.date.fromtimestamp(cache_path.stat().st_mtime) - datetime.timedelta(days=2):] # only look at the new logs, plus 2 more days to account for timezone weirdness
     # look for new deaths
     for line in log:
         if line.type is api.log.LineType.death:
@@ -662,11 +663,11 @@ def api_sessions_last_seen_world(world: minecraft.World):
     """Returns the last known session for each player"""
     # load from cache
     cache_path = api.util.CONFIG['cache'] / 'last-seen' / '{}.json'.format(world)
-    if cache_path.exists():
+    try:
         with cache_path.open() as cache_f:
             result = json.load(cache_f)
         log = api.log.Log(world)[datetime.date.fromtimestamp(cache_path.stat().st_mtime) - datetime.timedelta(days=2):] # only look at the new logs, plus 2 more days to account for timezone weirdness
-    else:
+    except:
         result = {}
         log = api.log.Log(world)
     # look for new join/leave lines
