@@ -311,28 +311,27 @@ def api_chunk_info_nether(world: minecraft.World, x: int, y: range(16), z: int):
 @api.util2.decode_args
 def api_chunk_overview(world: minecraft.World):
     """Returns a list of all chunk columns that have been generated, grouped by dimension."""
+    import anvil
+
     result = {}
     if (world.world_path / 'region').exists():
         result['overworld'] = []
         for region_path in (world.world_path / 'region').iterdir():
-            match = re.match('r.(-?[0-9]+).(-?[0-9]+).mca', region_path.name)
-            if not match:
+            if region_path.suffix != '.mca':
                 continue
-            result['overworld'].append({'x': int(match.group(1)), 'z': int(match.group(2))})
+            result['overworld'] += {'x': col.x, 'z': col.z} for col in anvil.Region(region_path)
     if (world.world_path / 'DIM-1' / 'region').exists():
         result['nether'] = []
         for region_path in (world.world_path / 'DIM-1' / 'region').iterdir():
-            match = re.match('r.(-?[0-9]+).(-?[0-9]+).mca', region_path.name)
-            if not match:
+            if region_path.suffix != '.mca':
                 continue
-            result['nether'].append({'x': int(match.group(1)), 'z': int(match.group(2))})
+            result['nether'] += {'x': col.x, 'z': col.z} for col in anvil.Region(region_path)
     if (world.world_path / 'DIM1' / 'region').exists():
         result['end'] = []
         for region_path in (world.world_path / 'DIM1' / 'region').iterdir():
-            match = re.match('r.(-?[0-9]+).(-?[0-9]+).mca', region_path.name)
-            if not match:
+            if region_path.suffix != '.mca':
                 continue
-            result['end'].append({'x': int(match.group(1)), 'z': int(match.group(2))})
+            result['end'] += {'x': col.x, 'z': col.z} for col in anvil.Region(region_path)
     return result
 
 @api.util2.json_route(application, '/world/<world>/chunks/overworld/column/<x>/<z>')
