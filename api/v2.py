@@ -319,19 +319,19 @@ def api_chunk_overview(world: minecraft.World):
         for region_path in (world.world_path / 'region').iterdir():
             if region_path.suffix != '.mca':
                 continue
-            result['overworld'] += {'x': col.x, 'z': col.z} for col in anvil.Region(region_path)
+            result['overworld'] += ({'x': col.x, 'z': col.z} for col in anvil.Region(region_path))
     if (world.world_path / 'DIM-1' / 'region').exists():
         result['nether'] = []
         for region_path in (world.world_path / 'DIM-1' / 'region').iterdir():
             if region_path.suffix != '.mca':
                 continue
-            result['nether'] += {'x': col.x, 'z': col.z} for col in anvil.Region(region_path)
+            result['nether'] += ({'x': col.x, 'z': col.z} for col in anvil.Region(region_path))
     if (world.world_path / 'DIM1' / 'region').exists():
         result['end'] = []
         for region_path in (world.world_path / 'DIM1' / 'region').iterdir():
             if region_path.suffix != '.mca':
                 continue
-            result['end'] += {'x': col.x, 'z': col.z} for col in anvil.Region(region_path)
+            result['end'] += ({'x': col.x, 'z': col.z} for col in anvil.Region(region_path))
     return result
 
 @api.util2.json_route(application, '/world/<world>/chunks/overworld/column/<x>/<z>')
