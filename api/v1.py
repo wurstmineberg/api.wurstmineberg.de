@@ -19,6 +19,7 @@ import api.v2
 DOCUMENTATION_INTRO = """
 <h1>Wurstmineberg API v1</h1>
 <p>Welcome to the Wurstmineberg Minecraft API. Feel free to play around!</p>
+<p><strong>Note:</strong> You are viewing the docs for version 1 of the API, which is deprecated. Please use <a href="/v2/">version 2</a> instead.</p>
 <p>This is version 1.18.1 of the API. Currently available API endpoints:</p>
 """
 
