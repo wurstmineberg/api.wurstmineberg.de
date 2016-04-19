@@ -280,38 +280,6 @@ def api_latest_backup(world: minecraft.World):
         bottle.response.set_header('Content-Disposition', 'attachment; filename={}.tar.gz'.format(backup.name))
         return backup.tar_file_iterator(subdir=str(world))
 
-@api.util2.json_route(application, '/world/<world>/chunks/end/column/<x>/<z>')
-@api.util2.decode_args
-def api_chunk_column_end(world: minecraft.World, x: int, z: int):
-    """Returns the given chunk column in JSON-encoded <a href="http://minecraft.gamepedia.com/Anvil_file_format">Anvil</a> NBT."""
-    import anvil
-
-    region = anvil.Region(world.world_path / 'DIM1' / 'region' / 'r.{}.{}.mca'.format(x // 32, z // 32))
-    chunk_column = region.chunk_column(x, z)
-    return api.util2.nbt_to_dict(chunk_column.data)
-
-@api.util2.json_route(application, '/world/<world>/chunks/end/chunk/<x>/<y>/<z>')
-@api.util2.decode_args
-def api_chunk_info_end(world: minecraft.World, x: int, y: range(16), z: int):
-    """Returns information about the given chunk section in JSON format. The nested arrays can be indexed in y-z-x order."""
-    return api.util2.chunk_section_info(api_chunk_column_end(world, x, z), x, y, z)
-
-@api.util2.json_route(application, '/world/<world>/chunks/nether/column/<x>/<z>')
-@api.util2.decode_args
-def api_chunk_column_nether(world: minecraft.World, x: int, z: int):
-    """Returns the given chunk column in JSON-encoded <a href="http://minecraft.gamepedia.com/Anvil_file_format">Anvil</a> NBT."""
-    import anvil
-
-    region = anvil.Region(world.world_path / 'DIM-1' / 'region' / 'r.{}.{}.mca'.format(x // 32, z // 32))
-    chunk_column = region.chunk_column(x, z)
-    return api.util2.nbt_to_dict(chunk_column.data)
-
-@api.util2.json_route(application, '/world/<world>/chunks/nether/chunk/<x>/<y>/<z>')
-@api.util2.decode_args
-def api_chunk_info_nether(world: minecraft.World, x: int, y: range(16), z: int):
-    """Returns information about the given chunk section in JSON format. The nested arrays can be indexed in y-z-x order."""
-    return api.util2.chunk_section_info(api_chunk_column_nether(world, x, z), x, y, z)
-
 @api.util2.json_route(application, '/world/<world>/chunks/overview')
 @api.util2.decode_args
 def api_chunk_overview(world: minecraft.World):
@@ -319,41 +287,30 @@ def api_chunk_overview(world: minecraft.World):
     import anvil
 
     result = {}
-    if (world.world_path / 'region').exists():
-        result['overworld'] = []
-        for region_path in (world.world_path / 'region').iterdir():
-            if region_path.suffix != '.mca':
-                continue
-            result['overworld'] += ({'x': col.x, 'z': col.z} for col in anvil.Region(region_path))
-    if (world.world_path / 'DIM-1' / 'region').exists():
-        result['nether'] = []
-        for region_path in (world.world_path / 'DIM-1' / 'region').iterdir():
-            if region_path.suffix != '.mca':
-                continue
-            result['nether'] += ({'x': col.x, 'z': col.z} for col in anvil.Region(region_path))
-    if (world.world_path / 'DIM1' / 'region').exists():
-        result['end'] = []
-        for region_path in (world.world_path / 'DIM1' / 'region').iterdir():
-            if region_path.suffix != '.mca':
-                continue
-            result['end'] += ({'x': col.x, 'z': col.z} for col in anvil.Region(region_path))
+    for dimension in api.util2.Dimension:
+        if dimension.region_path(world).exists():
+            result[dimension.name] = []
+            for region_path in dimension.region_path(world).iterdir():
+                if region_path.suffix != '.mca':
+                    continue
+                result[dimension.name] += ({'x': col.x, 'z': col.z} for col in anvil.Region(region_path))
     return result
 
-@api.util2.json_route(application, '/world/<world>/chunks/overworld/column/<x>/<z>')
+@api.util2.json_route(application, '/world/<world>/chunks/<dimension>/column/<x>/<z>')
 @api.util2.decode_args
-def api_chunk_column_overworld(world: minecraft.World, x: int, z: int):
+def api_chunk_column(world: minecraft.World, dimension: api.util2.Dimension, x: int, z: int):
     """Returns the given chunk column in JSON-encoded <a href="http://minecraft.gamepedia.com/Anvil_file_format">Anvil</a> NBT."""
     import anvil
 
-    region = anvil.Region(world.world_path / 'region' / 'r.{}.{}.mca'.format(x // 32, z // 32))
+    region = anvil.Region(dimension.region_path(world) / 'r.{}.{}.mca'.format(x // 32, z // 32))
     chunk_column = region.chunk_column(x, z)
     return api.util2.nbt_to_dict(chunk_column.data)
 
-@api.util2.json_route(application, '/world/<world>/chunks/overworld/chunk/<x>/<y>/<z>')
+@api.util2.json_route(application, '/world/<world>/chunks/<dimension>/chunk/<x>/<y>/<z>')
 @api.util2.decode_args
-def api_chunk_info_overworld(world: minecraft.World, x: int, y: range(16), z: int):
+def api_chunk_info(world: minecraft.World, dimension: api.util2.Dimension, x: int, y: range(16), z: int):
     """Returns information about the given chunk section in JSON format. The nested arrays can be indexed in y-z-x order."""
-    return api.util2.chunk_section_info(api_chunk_column_overworld(world, x, z), x, y, z)
+    return api.util2.chunk_section_info(api_chunk_column(world, dimension, x, z), x, y, z)
 
 @api.util2.json_route(application, '/world/<world>/deaths/latest')
 @api.util2.decode_args

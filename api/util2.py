@@ -1,5 +1,6 @@
 import bottle
 import datetime
+import enum
 import functools
 import inspect
 import json
@@ -16,6 +17,19 @@ import types
 import uuid
 
 import api.util
+
+@enum.unique
+class Dimension(enum.Enum):
+    overworld = 0
+    nether = -1
+    end = 1
+
+    def region_path(self, world):
+        return world.world_path / {
+            Dimension.overworld: 'region',
+            Dimension.nether: 'DIM-1/region',
+            Dimension.end: 'DIM1/region'
+        }[self]
 
 class Player:
     def __init__(self, player_id):
@@ -301,6 +315,13 @@ def decode_args(f):
                 raise ValueError('The decode_args function only works for POSITIONAL_OR_KEYWORD parameters, but a {} parameter was found'.format(param.kind))
             if param.annotation is inspect.Parameter.empty or not isinstance(arg, str): # no annotation or a direct function call
                 decoded_args[param.name] = arg
+            elif param.annotation is Dimension:
+                try:
+                    int(arg)
+                except:
+                    decoded_args[param.name] = Dimension[arg]
+                else:
+                    decoded_args[param.name] = Dimension(int(arg))
             elif param.annotation is Player:
                 decoded_args[param.name] = Player(arg)
             elif param.annotation is int:
