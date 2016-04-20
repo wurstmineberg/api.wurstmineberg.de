@@ -73,7 +73,13 @@ class Player:
                 else:
                     names_response = requests.get('https://api.mojang.com/user/profiles/{}/names'.format(self.uuid.hex))
                     if names_response.status_code == 204:
-                        profile = requests.get()
+                        profile = requests.get('https://sessionserver.mojang.com/session/minecraft/profile/{}'.format(self.uuid.hex)).json()
+                        self.data = {
+                            'minecraft': {
+                                'uuid': str(self.uuid),
+                                'nicks': [profile['name']]
+                            }
+                        }
                     else:
                         self.data = {
                             'minecraft': {
