@@ -4,6 +4,7 @@ sys.path.append('/opt/py')
 
 import bottle
 import collections
+import contextlib
 import datetime
 import hashlib
 import json
