@@ -18,6 +18,8 @@ import uuid
 
 import api.util
 
+PLAYER_CACHE = {}
+
 @enum.unique
 class Dimension(enum.Enum):
     overworld = 0
@@ -73,7 +75,7 @@ class Player:
                 else:
                     names_response = requests.get('https://api.mojang.com/user/profiles/{}/names'.format(self.uuid.hex))
                     if names_response.status_code == 200:
-                        self.data = {
+                        self.data = PLAYER_CACHE[self.uuid] = {
                             'minecraft': {
                                 'uuid': str(self.uuid),
                                 'nicks': [name_info['name'] for name_info in names_response.json()]
@@ -81,12 +83,17 @@ class Player:
                         }
                     elif names_response.status_code == 204:
                         profile = requests.get('https://sessionserver.mojang.com/session/minecraft/profile/{}'.format(self.uuid.hex)).json()
-                        self.data = {
+                        self.data = PLAYER_CACHE[self.uuid] = {
                             'minecraft': {
                                 'uuid': str(self.uuid),
                                 'nicks': [profile['name']]
                             }
                         }
+                    elif names_response.status_code == 429:
+                        if self.uuid in PLAYER_CACHE:
+                            self.data = PLAYER_CACHE[self.uuid]
+                        else:
+                            raise RuntimeError('Rate limited by Mojang API but no profile cached for player with UUID {}'.format(self.uuid))
                     else:
                         raise NotImplementedError('Unimplemented response status: {}'.format(names_response.status_code))
         if self.uuid is None and 'minecraft' in self.data:
