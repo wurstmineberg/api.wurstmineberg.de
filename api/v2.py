@@ -312,6 +312,15 @@ def api_chunk_info(world: minecraft.World, dimension: api.util2.Dimension, x: in
     """Returns information about the given chunk section in JSON format. The nested arrays can be indexed in y-z-x order."""
     return api.util2.chunk_section_info(api_chunk_column(world, dimension, x, z), x, y, z)
 
+@api.util2.json_route(application, '/world/<world>/chunks/<dimension>/block/<x>/<y>/<z>')
+@api.util2.decode_args
+def api_chunk_info(world: minecraft.World, dimension: api.util2.Dimension, x: int, y: range(256), z: int):
+    """Returns information about a single block in JSON format."""
+    chunk_x, block_x = divmod(x, 16)
+    chunk_y, block_y = divmod(y, 16)
+    chunk_z, block_z = divmod(z, 16)
+    return api.api_chunk_info(world, dimension, chunk_x, chunk_y, chunk_z)[block_y][block_z][block_x]
+
 @api.util2.json_route(application, '/world/<world>/deaths/latest')
 @api.util2.decode_args
 def api_latest_deaths(world: minecraft.World):
