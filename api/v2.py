@@ -314,7 +314,7 @@ def api_chunk_info(world: minecraft.World, dimension: api.util2.Dimension, x: in
 
 @api.util2.json_route(application, '/world/<world>/chunks/<dimension>/block/<x>/<y>/<z>')
 @api.util2.decode_args
-def api_chunk_info(world: minecraft.World, dimension: api.util2.Dimension, x: int, y: range(256), z: int):
+def api_block_info(world: minecraft.World, dimension: api.util2.Dimension, x: int, y: range(256), z: int):
     """Returns information about a single block in JSON format."""
     chunk_x, block_x = divmod(x, 16)
     chunk_y, block_y = divmod(y, 16)
