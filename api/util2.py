@@ -72,7 +72,14 @@ class Player:
                             break
                 else:
                     names_response = requests.get('https://api.mojang.com/user/profiles/{}/names'.format(self.uuid.hex))
-                    if names_response.status_code == 204:
+                    if names_response.status_code == 200:
+                        self.data = {
+                            'minecraft': {
+                                'uuid': str(self.uuid),
+                                'nicks': [name_info['name'] for name_info in names_response.json()]
+                            }
+                        }
+                    elif names_response.status_code == 204:
                         profile = requests.get('https://sessionserver.mojang.com/session/minecraft/profile/{}'.format(self.uuid.hex)).json()
                         self.data = {
                             'minecraft': {
@@ -81,12 +88,7 @@ class Player:
                             }
                         }
                     else:
-                        self.data = {
-                            'minecraft': {
-                                'uuid': str(self.uuid),
-                                'nicks': [name_info['name'] for name_info in names_response.json()]
-                            }
-                        }
+                        raise NotImplementedError('Unimplemented response status: {}'.format(names_response.status_code))
         if self.uuid is None and 'minecraft' in self.data:
             if 'uuid' in self.data['minecraft']:
                 self.uuid = uuid.UUID(self.data['minecraft']['uuid'])
