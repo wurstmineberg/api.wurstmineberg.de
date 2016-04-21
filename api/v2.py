@@ -669,25 +669,15 @@ def api_world_status(world: minecraft.World):
         result['list'] = [str(api.util2.Player(player.id)) for player in (status.players.sample or [])]
     return result
 
-@api.util2.json_route(application, '/world/<world>/villages/end')
+@api.util2.json_route(application, '/world/<world>/villages/<dimension>')
 @api.util2.decode_args
-def api_villages_end(world: minecraft.World):
-    """Returns the villages.dat in the End, encoded as JSON"""
-    nbt_file = world.world_path / 'data' / 'villages_end.dat'
-    return api.util2.nbtfile_to_dict(nbt_file)
-
-@api.util2.json_route(application, '/world/<world>/villages/nether')
-@api.util2.decode_args
-def api_villages_nether(world: minecraft.World):
-    """Returns the villages.dat in the Nether, encoded as JSON"""
-    nbt_file = world.world_path / 'data' / 'villages_nether.dat'
-    return api.util2.nbtfile_to_dict(nbt_file)
-
-@api.util2.json_route(application, '/world/<world>/villages/overworld')
-@api.util2.decode_args
-def api_villages_overworld(world: minecraft.World):
-    """Returns the villages.dat in the Overworld, encoded as JSON"""
-    nbt_file = world.world_path / 'data' / 'villages.dat'
+def api_villages(world: minecraft.World, dimension: api.util2.Dimension):
+    """Returns the villages.dat for the given dimension, encoded as JSON"""
+    nbt_file = world.world_path / 'data' / {
+        api.util2.Dimension.overworld: 'villages.dat',
+        api.util2.Dimension.nether: 'villages_nether.dat',
+        api.util2.Dimension.end: 'villages_end.dat'
+    }[dimension]
     return api.util2.nbtfile_to_dict(nbt_file)
 
 @api.util2.json_route(application, '/world/<world>/whitelist')
