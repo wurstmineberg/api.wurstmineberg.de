@@ -60,10 +60,19 @@ def show_index():
     for route in application.routes:
         if route.rule == '/':
             yield '\n<tr><td style="white-space: nowrap; font-weight: bold;">/v2/</td><td>This documentation page for version 2 of the API.</td></tr>'
-        elif '<' in route.rule:
-            yield '\n<tr><td style="white-space: nowrap;">/v2' + xml.sax.saxutils.escape(route.rule) + '</td><td>' + route.callback.__doc__.format(host=api.util.CONFIG['host']) + '</td></tr>'
+        elif route.rule.endswith('.json') and any(route.rule[:-4] + 'dat' == iter_route.rule for iter_route in application.routes):
+            # JSONified version of an NBT endpoint
+            continue
+        elif route.rule.endswith('.dat'):
+            if '<' in route.rule:
+                yield '\n<tr><td style="white-space: nowrap;">/v2' + xml.sax.saxutils.escape(route.rule[:-4]) + '.json (or .nbt)</td><td>' + route.callback.__doc__.format(host=api.util.CONFIG['host']) + '</td></tr>'
+            else:
+                yield '\n<tr><td style="white-space: nowrap;"><a href="/v2' + route.rule[:-4] + '.json">/v2' + route.rule[:-4] + '.json</a> (or <a href="/v2' + route.rule + '">.nbt</a>)</td><td>' + route.callback.__doc__.format(host=api.util.CONFIG['host']) + '</td></tr>'
         else:
-            yield '\n<tr><td style="white-space: nowrap;"><a href="/v2' + route.rule + '">/v2' + route.rule + '</a></td><td>' + route.callback.__doc__.format(host=api.util.CONFIG['host']) + '</td></tr>'
+            if '<' in route.rule:
+                yield '\n<tr><td style="white-space: nowrap;">/v2' + xml.sax.saxutils.escape(route.rule) + '</td><td>' + route.callback.__doc__.format(host=api.util.CONFIG['host']) + '</td></tr>'
+            else:
+                yield '\n<tr><td style="white-space: nowrap;"><a href="/v2' + route.rule + '">/v2' + route.rule + '</a></td><td>' + route.callback.__doc__.format(host=api.util.CONFIG['host']) + '</td></tr>'
     yield '</tbody></table>'
 
 @api.util2.json_route(application, '/meta/config/api')
