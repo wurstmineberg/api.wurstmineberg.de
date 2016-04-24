@@ -304,9 +304,9 @@ def cached_image(cache_path, image_func, cache_check):
     else:
         image_file = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
         image_path = pathlib.Path(image_file.name)
-    image = image_func()
-    image.save(image_file, 'PNG')
-    image_file.close()
+    with image_file:
+        image = image_func()
+        image.save(image_file, 'PNG')
     return bottle.static_file(image_path.name, str(image_path.parent), mimetype='image/png')
 
 def skin_cache_check(image_path):
