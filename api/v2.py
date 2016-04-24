@@ -65,9 +65,9 @@ def show_index():
             continue
         elif route.rule.endswith('.dat'):
             if '<' in route.rule:
-                yield '\n<tr><td style="white-space: nowrap;">/v2' + xml.sax.saxutils.escape(route.rule[:-4]) + '.json (or .nbt)</td><td>' + route.callback.__doc__.format(host=api.util.CONFIG['host']) + '</td></tr>'
+                yield '\n<tr><td style="white-space: nowrap;">/v2' + xml.sax.saxutils.escape(route.rule[:-4]) + '.json (or .dat)</td><td>' + route.callback.__doc__.format(host=api.util.CONFIG['host']) + '</td></tr>'
             else:
-                yield '\n<tr><td style="white-space: nowrap;"><a href="/v2' + route.rule[:-4] + '.json">/v2' + route.rule[:-4] + '.json</a> (or <a href="/v2' + route.rule + '">.nbt</a>)</td><td>' + route.callback.__doc__.format(host=api.util.CONFIG['host']) + '</td></tr>'
+                yield '\n<tr><td style="white-space: nowrap;"><a href="/v2' + route.rule[:-4] + '.json">/v2' + route.rule[:-4] + '.json</a> (or <a href="/v2' + route.rule + '">.dat</a>)</td><td>' + route.callback.__doc__.format(host=api.util.CONFIG['host']) + '</td></tr>'
         else:
             if '<' in route.rule:
                 yield '\n<tr><td style="white-space: nowrap;">/v2' + xml.sax.saxutils.escape(route.rule) + '</td><td>' + route.callback.__doc__.format(host=api.util.CONFIG['host']) + '</td></tr>'
