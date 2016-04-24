@@ -1,11 +1,11 @@
 Pillow>=3.0.0
--e git://github.com/wurstmineberg/anvil.git#egg=anvil
--e git://github.com/wurstmineberg/minecraft-backuproll.git#egg=backuproll
+#-e git://github.com/wurstmineberg/python-anvil.git#egg=anvil
+#-e git://github.com/wurstmineberg/minecraft-backuproll.git#egg=backuproll
 bottle>=0.12.8
 mcstatus>=2.1.0
 more-itertools>=2.2.0
 NBT>=1.4.1
 -e git://github.com/wurstmineberg/people.git#egg=people
--e git://github.com/wurstmineberg/playerhead.git#egg=playerhead
+#-e git://github.com/wurstmineberg/playerhead.git#egg=playerhead
 requests>=2.7.0
--e git://github.com/wurstmineberg/systemd-minecraft.git#egg=minecraft
+#-e git://github.com/wurstmineberg/systemd-minecraft.git#egg=minecraft

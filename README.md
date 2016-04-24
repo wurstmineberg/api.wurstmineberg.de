@@ -35,7 +35,6 @@ You can provide a configuration file in `/opt/wurstmineberg/config/api.json` to 
 {
     "cache": "/opt/wurstmineberg/api-cache",
     "host": "wurstmineberg.de",
-    "isDev": false,
     "jlogPath": "/opt/wurstmineberg/jlog",
     "logPath": "/opt/wurstmineberg/log",
     "moneysFile": "/opt/wurstmineberg/moneys/moneys.json",

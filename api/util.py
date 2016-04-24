@@ -1,31 +1,18 @@
 import bottle
 import json
-import pathlib
+from pathlib import Path
 
-try:
-    import uwsgi
-    CONFIG_PATH = pathlib.Path(uwsgi.opt['config_path'].decode('utf-8') if isinstance(uwsgi.opt['config_path'], bytes) else uwsgi.opt['config_path'])
-except:
-    CONFIG_PATH = pathlib.Path('/opt/wurstmineberg/config/api.json')
 
-def config():
-    try:
-        with CONFIG_PATH.open() as config_file:
-            loaded_config = json.load(config_file)
-    except:
-        loaded_config = {}
-    result = {
-        'isDev': loaded_config.get('isDev', False)
-    }
-    result['cache'] = pathlib.Path(loaded_config.get('cache', '/opt/wurstmineberg/dev-api-cache' if result['isDev'] else '/opt/wurstmineberg/api-cache'))
-    result['host'] = loaded_config.get('host', 'dev.wurstmineberg.de' if result['isDev'] else 'wurstmineberg.de')
-    result['logPath'] = pathlib.Path(loaded_config.get('logPath', '/opt/wurstmineberg/log'))
-    result['moneysFile'] = pathlib.Path(loaded_config.get('moneysFile', '/opt/wurstmineberg/moneys/moneys.json'))
-    result['webAssets'] = pathlib.Path(loaded_config.get('webAssets', '/opt/git/github.com/wurstmineberg/assets.wurstmineberg.de/branch/dev' if result['isDev'] else '/opt/git/github.com/wurstmineberg/assets.wurstmineberg.de/master'))
-    result['worldHost'] = loaded_config.get('worldHost', loaded_config.get('host', 'wurstmineberg.de'))
-    return result
+CONFIG_TYPES = {
+    "cache": Path,
+    "logPath": Path,
+    "moneysFile": Path,
+    "webAssets": Path,
+}
 
-CONFIG = config()
+from wmb import get_config, from_assets
+CONFIG = get_config("api", base = from_assets(__file__), value_types = CONFIG_TYPES)
+
 
 ERROR_PAGE_TEMPLATE = """
 %try:
