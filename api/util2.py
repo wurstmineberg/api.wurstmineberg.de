@@ -409,7 +409,7 @@ def nbt_route(app, route):
             else:
                 raise NotImplementedError('Cannot convert value of type {} to JSON'.format(type(result)))
 
-        @app.route(route + '.nbt')
+        @app.route(route + '.dat')
         @functools.wraps(f)
         def raw_nbt(*args, **kwargs):
             result = f(*args, **kwargs)
