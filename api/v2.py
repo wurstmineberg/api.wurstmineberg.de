@@ -297,7 +297,7 @@ def api_chunk_overview(world: minecraft.World):
                 result[dimension.name] += ({'x': col.x, 'z': col.z} for col in anvil.Region(region_path))
     return result
 
-@api.util2.json_route(application, '/world/<world>/chunks/<dimension>/column/<x>/<z>')
+@api.util2.nbt_route(application, '/world/<world>/chunks/<dimension>/column/<x>/<z>')
 @api.util2.decode_args
 def api_chunk_column(world: minecraft.World, dimension: api.util2.Dimension, x: int, z: int):
     """Returns the given chunk column in JSON-encoded <a href="http://minecraft.gamepedia.com/Anvil_file_format">Anvil</a> NBT."""
@@ -305,7 +305,7 @@ def api_chunk_column(world: minecraft.World, dimension: api.util2.Dimension, x: 
 
     region = anvil.Region(dimension.region_path(world) / 'r.{}.{}.mca'.format(x // 32, z // 32))
     chunk_column = region.chunk_column(x, z)
-    return api.util2.nbt_to_dict(chunk_column.data)
+    return chunk_column.data
 
 @api.util2.json_route(application, '/world/<world>/chunks/<dimension>/chunk/<x>/<y>/<z>')
 @api.util2.decode_args
@@ -367,12 +367,11 @@ def api_deaths(world: minecraft.World):
             }, cache_f, sort_keys=True, indent=4)
     return result
 
-@api.util2.json_route(application, '/world/<world>/level')
+@api.util2.nbt_route(application, '/world/<world>/level')
 @api.util2.decode_args
 def api_level(world: minecraft.World):
     """Returns the level.dat encoded as JSON"""
-    nbt_file = world.world_path / 'level.dat'
-    return api.util2.nbtfile_to_dict(nbt_file)
+    return world.world_path / 'level.dat'
 
 @api.util2.json_route(application, '/world/<world>/logs/all')
 @api.util2.decode_args
@@ -388,12 +387,11 @@ def api_logs_latest(world: minecraft.World):
     for line in api.log.Log.latest(world):
         yield line.as_json()
 
-@api.util2.json_route(application, '/world/<world>/maps/by-id/<identifier>')
+@api.util2.nbt_route(application, '/world/<world>/maps/by-id/<identifier>')
 @api.util2.decode_args
 def api_map_by_id(world: minecraft.World, identifier: int):
     """Returns info about the map item with damage value &lt;identifier&gt;, see <a href="http://minecraft.gamepedia.com/Map_Item_Format">Map Item Format</a> for documentation"""
-    nbt_file = world.world_path / 'data' / 'map_{}.dat'.format(identifier)
-    return api.util2.nbtfile_to_dict(nbt_file)
+    return world.world_path / 'data' / 'map_{}.dat'.format(identifier)
 
 @api.util2.json_route(application, '/world/<world>/maps/overview')
 @api.util2.decode_args
@@ -426,12 +424,11 @@ def api_map_render_png(world: minecraft.World, identifier: int):
 
     return api.util2.cached_image('map-renders/{}.png'.format(identifier), image_func, cache_check)
 
-@api.util2.json_route(application, '/world/<world>/player/<player>/playerdata')
+@api.util2.nbt_route(application, '/world/<world>/player/<player>/playerdata')
 @api.util2.decode_args
 def api_player_data(world: minecraft.World, player: api.util2.Player):
     """Returns the <a href="http://minecraft.gamepedia.com/Player.dat_format">player data</a> encoded as JSON"""
-    nbt_file = world.world_path / 'playerdata' / '{}.dat'.format(player.uuid)
-    return api.util2.nbtfile_to_dict(nbt_file)
+    return world.world_path / 'playerdata' / '{}.dat'.format(player.uuid)
 
 @api.util2.json_route(application, '/world/<world>/player/<player>/stats')
 @api.util2.decode_args
@@ -565,12 +562,11 @@ def api_playerstats_items(world: minecraft.World):
                 data[player_id][stat_str] = value
     return data
 
-@api.util2.json_route(application, '/world/<world>/scoreboard')
+@api.util2.nbt_route(application, '/world/<world>/scoreboard')
 @api.util2.decode_args
 def api_scoreboard(world: minecraft.World):
     """Returns the scoreboard data encoded as JSON"""
-    nbt_file = world.world_path / 'data' / 'scoreboard.dat'
-    return api.util2.nbtfile_to_dict(nbt_file)
+    return world.world_path / 'data' / 'scoreboard.dat'
 
 @api.util2.json_route(application, '/world/<world>/sessions/all')
 @api.util2.decode_args
@@ -669,16 +665,15 @@ def api_world_status(world: minecraft.World):
         result['list'] = [str(api.util2.Player(player.id)) for player in (status.players.sample or [])]
     return result
 
-@api.util2.json_route(application, '/world/<world>/villages/<dimension>')
+@api.util2.nbt_route(application, '/world/<world>/villages/<dimension>')
 @api.util2.decode_args
 def api_villages(world: minecraft.World, dimension: api.util2.Dimension):
     """Returns the villages.dat for the given dimension, encoded as JSON"""
-    nbt_file = world.world_path / 'data' / {
+    return world.world_path / 'data' / {
         api.util2.Dimension.overworld: 'villages.dat',
         api.util2.Dimension.nether: 'villages_nether.dat',
         api.util2.Dimension.end: 'villages_end.dat'
     }[dimension]
-    return api.util2.nbtfile_to_dict(nbt_file)
 
 @api.util2.json_route(application, '/world/<world>/whitelist')
 @api.util2.decode_args

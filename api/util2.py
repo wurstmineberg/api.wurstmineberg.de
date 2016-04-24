@@ -3,6 +3,7 @@ import datetime
 import enum
 import functools
 import inspect
+import io
 import json
 import minecraft
 import nbt.nbt
@@ -381,5 +382,47 @@ def json_route(app, route):
 
         pass #TODO add HTML view endpoint
         return f
+
+    return decorator
+
+def nbt_route(app, route):
+    def decorator(f):
+        @functools.wraps(f)
+        def nbt_filed(*args, **kwargs):
+            result = f(*args, **kwargs)
+            if isinstance(result, pathlib.Path):
+                return nbt.nbt.NBTFile(str(result))
+            elif isinstance(result, nbt.nbt.NBTFile):
+                return result
+            else:
+                raise NotImplementedError('Cannot convert value of type {} to NBTFile'.format(type(result)))
+
+        @app.route(route + '.json')
+        @functools.wraps(f)
+        def json_encoded(*args, **kwargs):
+            bottle.response.content_type = 'application/json'
+            result = f(*args, **kwargs)
+            if isinstance(result, pathlib.Path):
+                return json.dumps(nbtfile_to_dict(result), sort_keys=True, indent=4)
+            elif isinstance(result, nbt.nbt.NBTFile):
+                return json.dumps(nbt_to_dict(result), sort_keys=True, indent=4)
+            else:
+                raise NotImplementedError('Cannot convert value of type {} to JSON'.format(type(result)))
+
+        @app.route(route + '.nbt')
+        @functools.wraps(f)
+        def raw_nbt(*args, **kwargs):
+            result = f(*args, **kwargs)
+            if isinstance(result, pathlib.Path):
+                return bottle.static_file(result.name, str(result.parent), mimetype='application/x-minecraft-nbt')
+            elif isinstance(result, nbt.nbt.NBTFile):
+                buf = io.BytesIO()
+                result.write_file(fileobj=buf)
+                return buf
+            else:
+                raise NotImplementedError('Cannot convert value of type {} to NBT'.format(type(result)))
+
+        pass #TODO add HTML view endpoint
+        return nbt_filed
 
     return decorator
