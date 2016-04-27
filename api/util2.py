@@ -83,13 +83,17 @@ class Player:
                             }
                         }
                     elif names_response.status_code == 204:
-                        profile = requests.get('https://sessionserver.mojang.com/session/minecraft/profile/{}'.format(self.uuid.hex)).json()
-                        self.data = PLAYER_CACHE[self.uuid] = {
-                            'minecraft': {
-                                'uuid': str(self.uuid),
-                                'nicks': [profile['name']]
+                        try:
+                            profile = requests.get('https://sessionserver.mojang.com/session/minecraft/profile/{}'.format(self.uuid.hex)).json()
+                        except:
+                            self.data = {'minecraft': {'uuid': str(self.uuid)}}
+                        else:
+                            self.data = PLAYER_CACHE[self.uuid] = {
+                                'minecraft': {
+                                    'uuid': str(self.uuid),
+                                    'nicks': [profile['name']]
+                                }
                             }
-                        }
                     elif names_response.status_code == 429:
                         if self.uuid in PLAYER_CACHE:
                             self.data = PLAYER_CACHE[self.uuid]
