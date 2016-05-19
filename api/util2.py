@@ -401,17 +401,21 @@ def nbt_route(app, route):
             else:
                 raise NotImplementedError('Cannot convert value of type {} to NBTFile'.format(type(result)))
 
+        @functools.wraps(f)
+        def dict_encoded(*args, **kwargs):
+            result = f(*args, **kwargs)
+            if isinstance(result, pathlib.Path):
+                return nbtfile_to_dict(result)
+            elif isinstance(result, nbt.nbt.NBTFile):
+                return nbt_to_dict(result)
+            else:
+                raise NotImplementedError('Cannot convert value of type {} to JSON'.format(type(result)))
+
         @app.route(route + '.json')
         @functools.wraps(f)
         def json_encoded(*args, **kwargs):
             bottle.response.content_type = 'application/json'
-            result = f(*args, **kwargs)
-            if isinstance(result, pathlib.Path):
-                return json.dumps(nbtfile_to_dict(result), sort_keys=True, indent=4)
-            elif isinstance(result, nbt.nbt.NBTFile):
-                return json.dumps(nbt_to_dict(result), sort_keys=True, indent=4)
-            else:
-                raise NotImplementedError('Cannot convert value of type {} to JSON'.format(type(result)))
+            return json.dumps(dict_encoded(*args, **kwargs), sort_keys=True, indent=4)
 
         @app.route(route + '.dat')
         @functools.wraps(f)
@@ -427,6 +431,10 @@ def nbt_route(app, route):
                 raise NotImplementedError('Cannot convert value of type {} to NBT'.format(type(result)))
 
         pass #TODO add HTML view endpoint
+
+        nbt_filed.dict = dict_encoded # make Python-dict-encoded NBT available for Python code
+        nbt_filed.json = json_encoded # make JSON-encoded NBT available for Python code
+        nbt_filed.dat = raw_nbt # make raw NBT available for Python code
         return nbt_filed
 
     return decorator
