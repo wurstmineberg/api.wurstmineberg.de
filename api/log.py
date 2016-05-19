@@ -17,8 +17,10 @@ class Regexes:
 death_messages = (
     'blew up',
     'burned to death',
+    'discovered that floor was lava',
     'drowned',
     'drowned whilst trying to escape .*',
+    'experienced kinetic energy',
     'fell from a high place',
     'fell from a high place and fell out of the world',
     'fell into a patch of cacti',
@@ -36,6 +38,7 @@ death_messages = (
     'tried to swim in lava while trying to escape .*',
     'walked into a cactus while trying to escape .*',
     'walked into a fire whilst fighting .*',
+    'walked into danger zone due to .*',
     'was blown from a high place by .*',
     'was blown up by .*',
     'was burnt to a crisp whilst fighting .*',
