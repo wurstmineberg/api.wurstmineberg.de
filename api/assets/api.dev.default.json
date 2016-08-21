@@ -1,6 +1,6 @@
 {
-    "cache": "/opt/wurstmineberg/api-cache",
-    "host": "wurstmineberg.de",
+    "cache": "/opt/wurstmineberg/dev-api-cache",
+    "host": "dev.wurstmineberg.de",
     "logPath": "/opt/wurstmineberg/log",
     "moneysFile": "/opt/wurstmineberg/moneys/moneys.json",
     "webAssets": "/opt/git/github.com/wurstmineberg/assets.wurstmineberg.de/branch/dev",
