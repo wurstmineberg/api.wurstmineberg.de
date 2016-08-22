@@ -19,27 +19,6 @@ import api.log
 import api.util
 import api.util2
 
-def parse_version_string(commit_hash=True):
-    """Returns a string containing the current API version.
-
-    Optional arguments:
-    commit_hash -- If true (the default), and we are not on the master branch, return the first few digits of the commit ID instead.
-    """
-    path = pathlib.Path(__file__).resolve().parent.parent # go up 2 levels, from repo/api/v2.py to repo, where README.md is located
-    try:
-        version = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], cwd=str(path)).decode('utf-8').strip('\n')
-        if version == 'master' or not commit_hash:
-            try:
-                with (path / 'README.md').open() as readme:
-                    for line in readme.read().splitlines():
-                        if line.startswith('This is version '):
-                            return line.split(' ')[3]
-            except:
-                pass
-        return subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'], cwd=str(path)).decode('utf-8').strip('\n')
-    except:
-        pass
-
 from api.version import __version__
 
 DOCUMENTATION_INTRO = """
@@ -47,7 +26,7 @@ DOCUMENTATION_INTRO = """
 <h1>Wurstmineberg API v2</h1>
 <p>Welcome to the Wurstmineberg Minecraft API. Feel free to play around!</p>
 <p>This is version {} of the API. Currently available API endpoints:</p>
-""".format(__version__ if __version__ == parse_version_string(commit_hash=False) else '{} (≥ {})'.format(__version__, parse_version_string(commit_hash=False)))
+""".format(__version__)
 
 application = api.util.Bottle()
 
