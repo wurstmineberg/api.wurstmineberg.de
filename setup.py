@@ -8,7 +8,7 @@ setup(name='api.wurstmineberg.de',
       author_email='mail@wurstmineberg.de',
       packages=["api"],
       use_scm_version = {
-            "write_to": "api/version.py",
+            "write_to": "api/_version.py",
           },
       setup_requires=["setuptools_scm"],
       package_data={"api": ["assets/*.json"]}

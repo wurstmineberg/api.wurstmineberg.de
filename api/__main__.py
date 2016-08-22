@@ -10,11 +10,7 @@ import api.util
 import api.v1
 import api.v2
 
-try:
-    from api.version import version as __version__
-except ImportError:
-    from setuptools_scm import get_version
-    __version__ = get_version(root='..', relative_to=__file__)
+from api.version import __version__
 
 application = api.util.Bottle()
 

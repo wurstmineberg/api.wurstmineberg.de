@@ -40,7 +40,7 @@ def parse_version_string(commit_hash=True):
     except:
         pass
 
-__version__ = str(parse_version_string())
+from api.version import __version__
 
 DOCUMENTATION_INTRO = """
 <!DOCTYPE html>
