@@ -185,7 +185,9 @@ class Log:
                                 if not match:
                                     continue # not the type of message currently being tested for
                                 if match_type in ('achievement', 'chat_action', 'chat_message', 'join_leave'):
-                                    if match.group(1) in player_uuids:
+                                    if match.group(1) == 'Server':
+                                        player = None
+                                    elif match.group(1) in player_uuids:
                                         player = player_uuids[match.group(1)]
                                     else:
                                         player = player_uuids[match.group(1)] = api.util2.Player.by_minecraft_nick(match.group(1), at=time)
