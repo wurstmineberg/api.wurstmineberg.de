@@ -9,3 +9,4 @@ NBT>=1.4.1
 #-e git://github.com/wurstmineberg/playerhead.git#egg=playerhead
 requests>=2.7.0
 #-e git://github.com/wurstmineberg/systemd-minecraft.git#egg=minecraft
+setuptools-scm==1.11.1
