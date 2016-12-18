@@ -23,7 +23,7 @@ Requirements
 Configuration
 =============
 
-[This guide](http://michael.lustfield.net/nginx/bottle-uwsgi-nginx-quickstart) describes how to set up a bottle.py application such as this API using [nginx](http://wiki.nginx.org/). Just use [`api.py`](api.py) instead of writing your own `app.py` as in the guide.
+If you are using [nginx](http://wiki.nginx.org/), you can for the most part follow [this guide](http://michael.lustfield.net/nginx/bottle-uwsgi-nginx-quickstart). Just use [`api.py`](api.py) instead of writing your own `app.py` as in the guide, and make sure to install `uwsgi-plugin-python3` and `python3-bottle` instead of their Python 2 counterparts.
 
 If you're using [the Apache httpd](http://httpd.apache.org/) or another web server, you're on your own for setting up the API.
 
