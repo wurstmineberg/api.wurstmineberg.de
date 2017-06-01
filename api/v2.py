@@ -246,6 +246,18 @@ def api_skin_render_head_png(player: api.util2.Player, size: range(1025)):
 
     return api.util2.cached_image('skins/heads/{}/{}.png'.format(size, player), image_func, api.util2.skin_cache_check)
 
+@api.util2.json_route(application, '/world/<world>/advancements/all')
+@api.util2.decode_args
+def api_advancements(world: minecraft.World):
+    """Returns all advancements.json files for this world."""
+    data = {}
+    for advancements_path in (world.world_path / 'advancements').iterdir():
+        if advancements_path.suffix == '.json':
+            player = api.util2.Player(advancements_path.stem)
+            with advancements_path.open() as advancements_file:
+                data[str(player)] = json.load(advancements_file)
+    return data
+
 @application.route('/world/<world>/backup/latest.tar.gz')
 @api.util2.decode_args
 def api_latest_backup(world: minecraft.World):
@@ -466,7 +478,6 @@ def api_player_data_by_id(world: minecraft.World, identifier):
 def api_playerstats(world: minecraft.World):
     """Returns all stats for all players in one file."""
     data = {}
-    people = None
     stats_dir = world.world_path / 'stats'
     for stats_path in stats_dir.iterdir():
         if stats_path.suffix == '.json':
