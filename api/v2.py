@@ -428,6 +428,8 @@ def api_map_render_png(world: minecraft.World, identifier: int):
 def api_player_advancements(world: minecraft.World, player: api.util2.Player):
     """Returns the advancements.json for this player."""
     advancements_path = world.world_path / 'advancements' / '{}.json'.format(player.uuid)
+    if not advancements_path.exists():
+        bottle.abort(404, 'Advancements file for this player does not exist')
     with advancements_path.open() as advancements_file:
         return json.load(advancements_file)
 
