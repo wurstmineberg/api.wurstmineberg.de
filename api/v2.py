@@ -411,6 +411,14 @@ def api_map_render_png(world: minecraft.World, identifier: int):
 
     return api.util2.cached_image('map-renders/{}.png'.format(identifier), image_func, cache_check)
 
+@api.util2.json_route(application, '/world/<world>/player/<player>/advancements')
+@api.util2.decode_args
+def api_player_advancements(world: minecraft.World, player: api.util2.Player):
+    """Returns the advancements.json for this player."""
+    advancements_path = world.world_path / 'advancements' / '{}.json'.format(player.uuid)
+    with advancements_path.open() as advancements_file:
+        return json.load(advancements_file)
+
 @api.util2.nbt_route(application, '/world/<world>/player/<player>/playerdata')
 @api.util2.decode_args
 def api_player_data(world: minecraft.World, player: api.util2.Player):
