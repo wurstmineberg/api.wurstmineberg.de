@@ -470,7 +470,7 @@ def api_playerstats(world: minecraft.World):
 @api.util2.json_route(application, '/world/<world>/playerstats/achievement')
 @api.util2.decode_args
 def api_playerstats_achievements(world: minecraft.World):
-    """Returns all achievement stats in one file"""
+    """Returns all achievement stats in one file. Does not include players who have logged in since 17w13a."""
     all_data = api_playerstats(world)
     data = {}
     for player_id, player_data in all_data.items():
