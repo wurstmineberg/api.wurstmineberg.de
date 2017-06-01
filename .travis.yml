@@ -1,0 +1,7 @@
+language: python
+python: '3.4'
+script: python setup.py install
+notifications:
+  email: false
+  slack:
+    secure: CSN9+7RhAhmFGqybU4QqKYXMRFh/s+QacfWzrP9UUOvAdJaNtC0sY54KN/KoQjRp8ffo7RSKhprek1NJ4z+9w0gTENFq/LLR9EAIj5DIoNILAw6JAG8gKHTK3XOgWRululoyJfnlURYU0Sc3gNjOJtQWbTqGT3PVqNl+vY4kfUo=
