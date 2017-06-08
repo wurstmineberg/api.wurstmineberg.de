@@ -249,13 +249,13 @@ def api_skin_render_head_png(player: api.util2.Player, size: range(1025)):
 @api.util2.json_route(application, '/world/<world>/advancements/all')
 @api.util2.decode_args
 def api_advancements(world: minecraft.World):
-    """Returns all advancements.json files for this world."""
+    """Returns all advancements.json files for this world. Timestamps are normalized to UTC."""
     data = {}
     for advancements_path in (world.world_path / 'advancements').iterdir():
         if advancements_path.suffix == '.json':
             player = api.util2.Player(advancements_path.stem)
             with advancements_path.open() as advancements_file:
-                data[str(player)] = json.load(advancements_file)
+                data[str(player)] = api.util2.normalize_advancements(json.load(advancements_file))
     return data
 
 @application.route('/world/<world>/backup/latest.tar.gz')
@@ -426,12 +426,12 @@ def api_map_render_png(world: minecraft.World, identifier: int):
 @api.util2.json_route(application, '/world/<world>/player/<player>/advancements')
 @api.util2.decode_args
 def api_player_advancements(world: minecraft.World, player: api.util2.Player):
-    """Returns the advancements.json for this player."""
+    """Returns the advancements.json for this player. Timestamps are normalized to UTC."""
     advancements_path = world.world_path / 'advancements' / '{}.json'.format(player.uuid)
     if not advancements_path.exists():
         bottle.abort(404, 'Advancements file for this player does not exist')
     with advancements_path.open() as advancements_file:
-        return json.load(advancements_file)
+        return api.util2.normalize_advancements(json.load(advancements_file))
 
 @api.util2.nbt_route(application, '/world/<world>/player/<player>/playerdata')
 @api.util2.decode_args

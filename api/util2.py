@@ -1,4 +1,5 @@
 import bottle
+import copy
 import datetime
 import enum
 import functools
@@ -296,6 +297,15 @@ def chunk_section_info(column, x, y, z):
                 else:
                     block_info['tileEntity'] = tile_entity
     return layers
+
+def normalize_advancements(player_advancements):
+    result = copy.deepcopy(player_advancements)
+    for advancement in player_advancements.values():
+        for criterion_name, timestamp in advancement['criteria']:
+            # normalize timestamps to UTC
+            timestamp = datetime.datetime.strptime(timestamp).astimezone(datetime.timezone.utc)
+            result['criteria'][criterion] = '{:%Y-%m-%d %H:%M:%S %z}'.format(timestamp)
+    return result
 
 def cached_image(cache_path, image_func, cache_check):
     if api.util.CONFIG['cache'].exists():
