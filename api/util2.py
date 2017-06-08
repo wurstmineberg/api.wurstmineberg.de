@@ -304,7 +304,7 @@ def normalize_advancements(player_advancements):
         for criterion_name, timestamp in advancement['criteria']:
             # normalize timestamps to UTC
             timestamp = datetime.datetime.strptime(timestamp).astimezone(datetime.timezone.utc)
-            result['criteria'][criterion] = '{:%Y-%m-%d %H:%M:%S %z}'.format(timestamp)
+            result['criteria'][criterion_name] = '{:%Y-%m-%d %H:%M:%S %z}'.format(timestamp)
     return result
 
 def cached_image(cache_path, image_func, cache_check):
