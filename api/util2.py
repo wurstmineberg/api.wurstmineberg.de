@@ -300,11 +300,11 @@ def chunk_section_info(column, x, y, z):
 
 def normalize_advancements(player_advancements):
     result = copy.deepcopy(player_advancements)
-    for advancement in player_advancements.values():
+    for advancement_name, advancement in player_advancements.items():
         for criterion_name, timestamp in advancement['criteria'].items():
             # normalize timestamps to UTC
             timestamp = datetime.datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S %z').astimezone(datetime.timezone.utc)
-            result['criteria'][criterion_name] = '{:%Y-%m-%d %H:%M:%S %z}'.format(timestamp)
+            result[advancement_name]['criteria'][criterion_name] = '{:%Y-%m-%d %H:%M:%S %z}'.format(timestamp)
     return result
 
 def cached_image(cache_path, image_func, cache_check):
