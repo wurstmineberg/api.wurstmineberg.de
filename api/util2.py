@@ -303,7 +303,7 @@ def normalize_advancements(player_advancements):
     for advancement in player_advancements.values():
         for criterion_name, timestamp in advancement['criteria'].items():
             # normalize timestamps to UTC
-            timestamp = datetime.datetime.strptime(timestamp).astimezone(datetime.timezone.utc)
+            timestamp = datetime.datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S %z').astimezone(datetime.timezone.utc)
             result['criteria'][criterion_name] = '{:%Y-%m-%d %H:%M:%S %z}'.format(timestamp)
     return result
 
