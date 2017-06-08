@@ -301,7 +301,7 @@ def chunk_section_info(column, x, y, z):
 def normalize_advancements(player_advancements):
     result = copy.deepcopy(player_advancements)
     for advancement in player_advancements.values():
-        for criterion_name, timestamp in advancement['criteria']:
+        for criterion_name, timestamp in advancement['criteria'].items():
             # normalize timestamps to UTC
             timestamp = datetime.datetime.strptime(timestamp).astimezone(datetime.timezone.utc)
             result['criteria'][criterion_name] = '{:%Y-%m-%d %H:%M:%S %z}'.format(timestamp)
