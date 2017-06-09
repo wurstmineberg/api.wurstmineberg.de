@@ -73,6 +73,20 @@ def api_version():
         'api': __version__
     }
 
+@api.util2.json_route(application, '/minecraft/advancements/overview')
+def api_advancement_definitions_overview():
+    """Returns a list of all advancements defined by Minecraft."""
+    def _definitions_in_dir(directory):
+        result = {}
+        for subpath in directory.iterdir():
+            if subpath.is_dir():
+                result[subpath.name] = _definitions_in_dir(subpath)
+            else:
+                result[subpath.stem] = subpath.name
+        return result
+
+    return _definitions_in_dir(api.util.CONFIG['webAssets'] / 'json' / 'advancements')
+
 @api.util2.json_route(application, '/minecraft/items/all')
 def api_all_items():
     """Returns the item info JSON file (<a href="http://assets.{host}/json/items.json.description.txt">documentation</a>)"""
