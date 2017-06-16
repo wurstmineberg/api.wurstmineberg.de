@@ -300,6 +300,12 @@ def api_chunk_overview(world: minecraft.World):
     """Returns a list of all chunk columns that have been generated, grouped by dimension."""
     import anvil
 
+    cache_path = api.util.CONFIG['cache'] / 'chunks.json'
+    if cache_path.exists():
+        with cache_path.open() as cache_f:
+            cache = json.load(cache_f)
+    else:
+        cache = {dimension.name: {} for dimension in api.util2.Dimension}
     result = {}
     for dimension in api.util2.Dimension:
         if dimension.region_path(world).exists():
@@ -307,7 +313,14 @@ def api_chunk_overview(world: minecraft.World):
             for region_path in dimension.region_path(world).iterdir():
                 if region_path.suffix != '.mca':
                     continue
-                result[dimension.name] += ({'x': col.x, 'z': col.z} for col in anvil.Region(region_path))
+                if region_path.stem not in cache[dimension.name] or region_path.stat().st_mtime > cache[dimension.name][region_path.stem]['mtime']:
+                    cache[dimension.name][region_path.stem] = {
+                        'data': [{'x': col.x, 'z': col.z} for col in anvil.Region(region_path)],
+                        'mtime': region_path.stat().st_mtime
+                    }
+                result[dimension.name] += cache[dimension.name][region_path.stem]['data']
+    with cache_path.open('w') as cache_f:
+        json.dump(cache, cache_f, indent=4, sort_keys=True)
     return result
 
 @api.util2.nbt_route(application, '/world/<world>/chunks/<dimension>/column/<x>/<z>')
