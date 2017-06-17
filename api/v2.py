@@ -294,6 +294,23 @@ def api_latest_backup(world: minecraft.World):
         bottle.response.set_header('Content-Disposition', 'attachment; filename={}.tar.gz'.format(backup.name))
         return backup.tar_file_iterator(subdir=str(world))
 
+@api.util2.json_route(application, '/world/<world>/chunks/regions')
+@api.util2.decode_args
+def api_region_overview(world: minecraft.World):
+    """Returns a list of all existing region files, grouped by dimension."""
+    result = {}
+    for dimension in api.util2.Dimension:
+        if dimension.region_path(world).exists():
+            result[dimension.name] = []
+            for region_path in dimension.region_path(world).iterdir():
+                match = re.fullmatch('r.(-?[0-9]+).(-?[0-9]+).mca', region_path.name)
+                if match:
+                    result[dimension.name].append({
+                        'x': int(match.group(1)),
+                        'z': int(match.group(2))
+                    })
+    return result
+
 @api.util2.json_route(application, '/world/<world>/chunks/overview')
 @api.util2.decode_args
 def api_chunk_overview(world: minecraft.World):
