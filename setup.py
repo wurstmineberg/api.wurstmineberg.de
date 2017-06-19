@@ -17,7 +17,6 @@ setuptools.setup(
         'NBT',
         'Pillow',
         'anvil',
-        'backuproll',
         'bottle',
         'minecraft',
         'mcstatus',
@@ -29,7 +28,6 @@ setuptools.setup(
     ],
     dependency_links=[
         'git+https://github.com/wurstmineberg/python-anvil.git#egg=anvil',
-        'git+https://github.com/wurstmineberg/minecraft-backuproll.git#egg=backuproll',
         'git+https://github.com/wurstmineberg/systemd-minecraft.git#egg=minecraft',
         'git+https://github.com/wurstmineberg/people.git#egg=people',
         'git+https://github.com/wurstmineberg/playerhead.git#egg=playerhead'
