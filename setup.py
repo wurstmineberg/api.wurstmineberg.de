@@ -18,7 +18,7 @@ setuptools.setup(
         'Pillow',
         'anvil',
         'bottle',
-        'minecraft',
+        'systemd-minecraft',
         'mcstatus',
         'more-itertools',
         'people',
