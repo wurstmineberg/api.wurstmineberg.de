@@ -9,7 +9,6 @@ Requirements
 
 *   [Python](http://python.org/) 3.4
 *   [Pillow](http://pypi.python.org/pypi/Pillow) 3.0 (required for image-producing endpoints only)
-*   [anvil](https://github.com/wurstmineberg/anvil) (required for chunk endpoints only)
 *   [bottle](http://bottlepy.org/) 0.12
 *   [mcstatus](https://github.com/Dinnerbone/mcstatus) 2.1 (required for world status endpoints only)
 *   [minecraft-backuproll](https://github.com/wurstmineberg/minecraft-backuproll) 0.1 (required for world backup endpoints only)
@@ -17,6 +16,7 @@ Requirements
 *   [nbt](https://pypi.python.org/pypi/NBT) 1.4
 *   [people](https://github.com/wurstmineberg/people) (required for people.json features only)
 *   [playerhead](https://github.com/wurstmineberg/playerhead) 3.0 (required for skin rendering endpoints only)
+*   [python-anvil](https://github.com/wurstmineberg/python-anvil) (required for chunk endpoints only)
 *   [requests](http://python-requests.org/) 2.7
 *   [systemd-minecraft](https://github.com/wurstmineberg/systemd-minecraft)
 

@@ -315,7 +315,7 @@ def api_region_overview(world: minecraft.World):
 @api.util2.decode_args
 def api_chunk_overview(world: minecraft.World):
     """Returns a list of all chunk columns that have been generated, grouped by dimension."""
-    import anvil
+    import mcanvil
 
     cache_path = api.util.CONFIG['cache'] / 'chunks.json'
     if cache_path.exists():
@@ -332,7 +332,7 @@ def api_chunk_overview(world: minecraft.World):
                     continue
                 if region_path.stem not in cache[dimension.name] or region_path.stat().st_mtime > cache[dimension.name][region_path.stem]['mtime']:
                     cache[dimension.name][region_path.stem] = {
-                        'data': [{'x': col.x, 'z': col.z} for col in anvil.Region(region_path)],
+                        'data': [{'x': col.x, 'z': col.z} for col in mcanvil.Region(region_path)],
                         'mtime': region_path.stat().st_mtime
                     }
                 result[dimension.name] += cache[dimension.name][region_path.stem]['data']
@@ -344,9 +344,9 @@ def api_chunk_overview(world: minecraft.World):
 @api.util2.decode_args
 def api_chunk_column(world: minecraft.World, dimension: api.util2.Dimension, x: int, z: int):
     """Returns the given chunk column in JSON-encoded <a href="http://minecraft.gamepedia.com/Anvil_file_format">Anvil</a> NBT."""
-    import anvil
+    import mcanvil
 
-    region = anvil.Region(dimension.region_path(world) / 'r.{}.{}.mca'.format(x // 32, z // 32))
+    region = mcanvil.Region(dimension.region_path(world) / 'r.{}.{}.mca'.format(x // 32, z // 32))
     chunk_column = region.chunk_column(x, z)
     return chunk_column.data
 

@@ -16,9 +16,9 @@ setuptools.setup(
     install_requires=[
         'NBT',
         'Pillow',
-        'anvil',
         'bottle',
         'systemd-minecraft',
+        'mcanvil',
         'mcstatus',
         'more-itertools',
         'people',
@@ -27,7 +27,7 @@ setuptools.setup(
         'setuptools-scm'
     ],
     dependency_links=[
-        'git+https://github.com/wurstmineberg/python-anvil.git#egg=anvil',
+        'git+https://github.com/wurstmineberg/python-anvil.git#egg=mcanvil',
         'git+https://github.com/wurstmineberg/systemd-minecraft.git#egg=minecraft',
         'git+https://github.com/wurstmineberg/people.git#egg=people',
         'git+https://github.com/wurstmineberg/playerhead.git#egg=playerhead'
