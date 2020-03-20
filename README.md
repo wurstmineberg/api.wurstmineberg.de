@@ -1,3 +1,5 @@
+**Note:** This repository only hosts versions 1 and 2 of the API, which are no longer operational. Version 3 can be found at <https://github.com/wurstmineberg/wurstmineberg.de/blob/master/wurstmineberg_web/api.py>.
+
 This is [Wurstmineberg](http://wurstmineberg.de/)'s Minecraft API, an API server using [bottle.py](http://bottlepy.org/) that exposes [Minecraft](http://minecraft.net/) server data via [JSON](http://www.json.org/). It is not to be confused with [Minecraft's official API](http://minecraft.gamepedia.com/Plugin_API) which is currently in development.
 
 It can be found live on http://api.wurstmineberg.de/.
